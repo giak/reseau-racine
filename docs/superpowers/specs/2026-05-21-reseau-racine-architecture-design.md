@@ -119,42 +119,45 @@ Quand un transport tombe, le message en prend un autre compatible. La dégradati
 
 ### Principe
 
-L'identité est une **paire de clés cryptographiques** (clé privée + clé publique).
+L'identité est une **paire de clés secp256k1** (clé privée + clé publique), standard Nostr.
 
-- **Clé privée** : signe les messages, prouve "c'est moi". Ne quitte jamais le nœud.
-- **Clé publique** (`npub`) : vérifie les signatures, identifiant unique. Partagée publiquement.
+- **Clé privée** (`nsec`) : signe les messages, prouve "c'est moi". Ne quitte jamais le nœud.
+- **Clé publique** (`npub`) : vérifie les signatures, identifiant unique (hex 64 caractères). Partagée publiquement.
 
 **Propriétés** : portable, indépendante du transport, non-supprimable, vérifiable.
 
 ### Format
 
-- **Signature** : Nostr (Ed25519) — écosystème existant, outils matures
-- **Chiffrement** : X25519 — comme Signal, standard industriel
+- **Signature** : secp256k1 (standard Nostr) — écosystème existant, outils matures
+- **Chiffrement** : X25519 dérivé de secp256k1 (NIP-44) — ChaCha20-Poly1305 AEAD
+
+> **Note** : Nostr utilise secp256k1 pour les signatures (pas Ed25519). Pour le chiffrement E2E, la clé X25519 est dérivée de la clé secp256k1 via NIP-44. C'est le standard actuel (NIP-17 + NIP-44 + NIP-59), qui remplace NIP-04 (déprécié, AES-CBC non authentifié, CVE-2026-41301).
 
 ### Fonctionnement
 
 ```
-1. L'utilisateur génère sa paire de clés (1 clic)
-2. La clé publique (npub) est son identité
+1. L'utilisateur génère sa paire de clés secp256k1 (1 clic)
+2. La clé publique (npub, hex dérivé de secp256k1) est son identité
 3. Pour envoyer un message à Bob :
-   a. Le message est chiffré avec X25519 (clé publique de Bob)
-   b. Le message chiffré est signé avec Ed25519 (clé privée d'Alice)
-   c. Le paquet signé+chiffré est envoyé via TOUS les transports compatibles avec le type de contenu
+   a. Le message est chiffré avec NIP-44 (X25519 dérivé + ChaCha20-Poly1305)
+   b. Le message chiffré est signé avec secp256k1 (clé privée d'Alice)
+   c. Le paquet est enveloppé (NIP-59 gift wrap) pour cacher les métadonnées
+   d. Le gift wrap est envoyé via TOUS les transports compatibles avec le type de contenu
 4. Bob reçoit le message (par le premier transport qui arrive)
-5. Bob vérifie la signature et déchiffre
+5. Bob unwrap le gift wrap, vérifie la signature secp256k1 et déchiffre
 ```
 
 ### Gestion de la clé privée
 
 | Méthode | Sécurité | UX | Recommandé pour |
 |---------|----------|----|----------------|
-| **Fichier local chiffré** | Moyenne | Simple | Nœud consommateur |
+| **Fichier local chiffré** (NIP-49) | Moyenne | Simple | Nœud consommateur |
 | **Hardware wallet** (Nitrokey, YubiKey) | Haute | Moyenne | Nœud relais/créateur |
-| **Seed phrase** (12 mots) | Haute | Complexe | Backup |
+| **Seed phrase** (12 mots, NIP-06) | Haute | Complexe | Backup |
 
 ### Réputation liée à l'identité
 
-- **Signature vérifiable** : chaque message est signé → impossible de falsifier l'auteur
+- **Signature vérifiable** : chaque message est signé avec secp256k1 → impossible de falsifier l'auteur
 - **Historique portable** : l'historique suit la clé, pas le transport
 - **Réputation distribuée** : score basé sur les interactions vérifiables
 - **Web of trust** : "Je fais confiance à Alice" → si Alice fait confiance à Bob, je peux faire confiance à Bob
@@ -233,33 +236,41 @@ Quand internet revient :
 
 ## §5 Messagerie E2E (Coordination sécurisée — Priorité 1)
 
-### Structure du message
+### Structure du message (NIP-17)
+
+Le message passe par 3 couches (NIP-17) :
 
 ```
-Header:
-  - ID unique (hash)
-  - Timestamp
-  - Type (1:1, groupe, cellule, broadcast)
-  - TTL (Time To Live)
-  - Priorité (normal, urgent, critique)
+Couche 1 — Rumor (kind 14 — PrivateDirectMessage)
+  Header:
+    - kind: 14
+    - created_at: timestamp
+    - tags: [["p", "npub_destinataire"], ["e", "event_id_réponse"] (optionnel)]
+  Payload:
+    - Contenu (texte, fichier, coordonnée GPS)
+    - TTL (NIP-40 expiration timestamp)
 
-Payload (chiffré X25519):
-  - Contenu (texte, fichier, coordonnée GPS)
-  - Métadonnées de groupe (si applicable)
+Couche 2 — Seal (kind 13 — signé avec clé éphémère)
+  - Le rumor est signé avec une clé secp256k1 éphémère (pas la clé principale)
+  - Cache l'identité de l'expéditeur aux relais
 
-Signature (Ed25519):
-  - Signé avec la clé privée de l'expéditeur
+Couche 3 — Gift Wrap (kind 1059 — chiffré NIP-44 pour le destinataire)
+  - Le seal est chiffré avec NIP-44 (X25519 + ChaCha20-Poly1305)
+  - Seule métadonnée visible : ["p", "npub_destinataire"]
+  - Le relais ne voit pas l'expéditeur, ni le contenu
 ```
+
+> **Pourquoi 3 couches** : NIP-04 (kind 4, déprécié) exposait les métadonnées (qui envoie à qui). NIP-17 résout ça avec le gift wrap (NIP-59) qui cache l'expéditeur, et NIP-44 qui remplace AES-CBC par ChaCha20-Poly1305 AEAD.
 
 ### Types de conversations
 
 | Type | Description | Chiffrement | Usage |
 |------|-------------|-------------|-------|
-| **1:1** | Conversation privée entre 2 personnes | X25519 E2E | Communication sensible, sources |
-| **Cellule (3)** | Groupe fermé de 3 personnes | X25519 E2E + clé de groupe | Coordination d'action directe |
-| **Essaim (10)** | Groupe de 10 cellules | X25519 E2E + clé de groupe | Coordination régionale |
-| **Broadcast** | Message public signé | Signature Ed25519 seul | Publication, annonces |
-| **Canal** | Canal thématique ouvert | Signature Ed25519 | Discussion communautaire |
+| **1:1** | Conversation privée entre 2 personnes | NIP-44 (X25519 + ChaCha20-Poly1305) | Communication sensible, sources |
+| **Cellule (3)** | Groupe fermé de 3 personnes | NIP-44 + clé de groupe X25519 | Coordination d'action directe |
+| **Essaim (10)** | Groupe de 10 cellules | NIP-44 + clé de groupe X25519 | Coordination régionale |
+| **Broadcast** | Message public signé | Signature secp256k1 seule | Publication, annonces |
+| **Canal** | Canal thématique ouvert | Signature secp256k1 | Discussion communautaire |
 
 ### Fonctionnalités de sécurité
 
@@ -277,8 +288,8 @@ Signature (Ed25519):
 | Menace | Contre-mesure |
 |--------|--------------|
 | **Infiltration Viginum** | Web of trust : chaque membre d'une cellule doit être vérifié en personne ou par parrainage croisé |
-| **Faux compte** | Signature cryptographique obligatoire + vérification de fingerprint |
-| **Capture de nœud** | Forward secrecy + auto-destruction = les messages capturés sont illisibles |
+| **Faux compte** | Signature secp256k1 obligatoire + vérification de fingerprint |
+| **Capture de nœud** | Forward secrecy + auto-destruction + NIP-44 AEAD = les messages capturés sont illisibles et non falsifiables |
 | **Analyse de trafic** | Reticulum n'a pas d'adresses source + padding des messages (uniquement sur transport Reticulum). Sur internet (Matrix/Nostr), les métadonnées sont visibles par les serveurs — le contenu reste chiffré E2E mais pas l'anonymat. |
 | **Social engineering** | Cellules de 3 : un infiltré ne connaît que 2 personnes, pas l'essaim |
 | **Spam** | Rate limiting : Niveau 0 = 10 messages/min, Niveau 1 = 50 messages/min, Niveau 2+ = illimité. Les messages en excès sont rejetés localement. |
@@ -289,15 +300,15 @@ Signature (Ed25519):
 |---------|----------|-----------|
 | Messages actifs | SQLite local | Oui (SQLCipher) |
 | Messages expirés | Supprimés (overwrite) | — |
-| Clés privées | Fichier chiffré ou hardware wallet | Oui (AES-256-GCM) |
+| Clés privées (secp256k1) | Fichier chiffré (NIP-49) ou hardware wallet | Oui (AES-256-GCM) |
 | Cache contenu | IPFS local | Non (contenu public) |
 | Contacts | SQLite local | Oui |
 
 ### Protocole de groupe
 
-1. **Création** : le créateur génère une clé de groupe (X25519)
-2. **Invitation** : chaque membre reçoit la clé de groupe chiffrée avec sa clé publique individuelle
-3. **Communication** : les messages de groupe sont chiffrés avec la clé de groupe
+1. **Création** : le créateur génère une clé de groupe X25519 (dérivée de secp256k1)
+2. **Invitation** : chaque membre reçoit la clé de groupe chiffrée avec NIP-44 (sa clé publique individuelle)
+3. **Communication** : les messages de groupe sont chiffrés avec NIP-44 (clé de groupe X25519 + ChaCha20-Poly1305)
 4. **Départ** : si un membre quitte, la clé de groupe est regenerée et redistribuée (post-compromise security)
 5. **Exclusion** : un membre exclu ne peut plus déchiffrer les nouveaux messages
 
@@ -311,7 +322,7 @@ Signature (Ed25519):
 |---------|--------|
 | **Format** | Markdown + signature Nostr (nip-01) |
 | **Distribution** | Nostr relays + IPFS (CID) |
-| **Vérification** | Signature Ed25519 = l'auteur est vérifiable cryptographiquement |
+| **Vérification** | Signature secp256k1 = l'auteur est vérifiable cryptographiquement |
 | **Résilience** | Disponible sur TOUS les modes (même LoRa pour les articles courts) |
 | **Censure** | Impossible à supprimer (IPFS + Nostr distribué) |
 
@@ -442,8 +453,8 @@ Niveau 3 — Collège (élection)
 
 | Couche | Faisabilité | Risque | Détail |
 |--------|------------|--------|--------|
-| **Identité (Nostr + X25519)** | ✅ Haute | Faible | Nostr existe, X25519 est standard. Client à construire. |
-| **Messagerie E2E** | ✅ Haute | Faible | Signal Protocol/MLS existent. À adapter au multi-transport. |
+| **Identité (Nostr secp256k1)** | ✅ Haute | Faible | Nostr existe, secp256k1 standard. Client à construire. |
+| **Messagerie E2E** | ✅ Haute | Faible | NIP-17 + NIP-44 + NIP-59 = standard actuel. Crate `nostr` v0.44.2 supporte nativement. |
 | **Routage multi-transport** | ⚠️ Moyenne | Moyen | Reticulum gère le multi-transport nativement. Bridge internet à construire. |
 | **Nœud Consommateur** | ✅ Haute | Faible | App légère + WebTorrent + IPFS desktop. Existe déjà. |
 | **Nœud Relais** | ✅ Haute | Faible | Reticulum + IPFS + Nostr relay sur Pi 5. Faisable. |
@@ -458,8 +469,8 @@ Niveau 3 — Collège (élection)
 | Composant | Primaire | Alternative | Remplacement dégradé |
 |-----------|----------|-------------|---------------------|
 | **Identité** | Nostr (nsec/npub) | PGP | Seed phrase 12 mots (backup) |
-| **Messagerie 1:1** | Client custom (X25519) | Signal | Reticulum Sideband |
-| **Messagerie groupe** | Client custom (clé de groupe) | Matrix | Reticulum Sideband |
+| **Messagerie 1:1** | NIP-17 (NIP-44 + NIP-59) | Signal | Reticulum Sideband |
+| **Messagerie groupe** | NIP-44 + clé de groupe X25519 | Matrix | Reticulum Sideband |
 | **Articles** | Nostr + IPFS | WriteFreely | Reticulum NomadNet |
 | **Vidéos** | PeerTube + WebTorrent | IPFS seul | Cache local WiFi |
 | **Streams** | Owncast + WebTorrent | PeerTube live | Enregistré → VOD |
@@ -519,12 +530,13 @@ Niveau 3 — Collège (élection)
 | Composant | Technologie | Pourquoi |
 |-----------|------------|----------|
 | **UI** | Tauri + React | Léger, cross-platform (Windows/macOS/Linux), bundle < 10 Mo |
-| **Core** | Rust | Performance, sécurité mémoire, bindings vers libs crypto |
-| **Crypto** | libsodium (X25519, Ed25519, AES-256-GCM) | Standard industriel, audité |
+| **Core** | Rust | Performance, sécurité mémoire, pure Rust crypto (pas de FFI C) |
+| **Crypto** | Crate `nostr` v0.44.2 (secp256k1 + NIP-44 ChaCha20-Poly1305 + NIP-59) | Support natif NIP-17, crates pures Rust auditables |
+| **Crypto (custom)** | `x25519-dalek` + `chacha20poly1305` + `ed25519-dalek` | Si besoin de crypto hors Nostr (Reticulum, groupes custom) |
 | **Storage** | SQLite + SQLCipher | Chiffré au repos, léger |
 | **P2P** | libp2p (IPFS) + WebTorrent | Mature, écosystème large |
 | **Reticulum** | pythonreticulum (subprocess) ou reticulum-rs | Stack réseau off-grid |
-| **Nostr** | nostr-rs-relay + client lib | Écosystème existant |
+| **Nostr** | Crate `nostr` v0.44.2 + tokio-tungstenite | Écosystème existant, async WebSocket |
 
 ### Interfaces
 
@@ -542,6 +554,7 @@ Niveau 3 — Collège (élection)
 
 | Risque | Probabilité | Impact | Mitigation |
 |--------|------------|--------|------------|
+| **Utilisation de NIP-04 (déprécié) par erreur** | Moyenne | Critique | Utiliser NIP-17 + NIP-44 + NIP-59. Crate `nostr` v0.44.2 supporte nativement. |
 | **Bridge internet ↔ Reticulum non fonctionnel** | Moyenne | Élevé | Commencer avec internet seul, ajouter Reticulum en Phase 2 |
 | **UX trop complexe pour le grand public** | Haute | Critique | Client Tauri simple, installation en 1 clic, documentation visuelle |
 | **Adoption insuffisante** | Haute | Critique | Cibler d'abord les cellules militantes (besoin réel), pas le grand public |
@@ -556,8 +569,8 @@ Niveau 3 — Collège (élection)
 
 ### Phase 1 (0-3 mois) — MVP Coordination
 
-- [ ] Client Tauri + Rust core (identité Nostr + X25519)
-- [ ] Messagerie 1:1 E2E sur internet (Nostr + Matrix bridge)
+- [ ] Client Tauri + Rust core (identité Nostr secp256k1)
+- [ ] Messagerie 1:1 E2E sur internet (NIP-17 + NIP-44 + NIP-59)
 - [ ] Cellules de 3 (création, invitation, clé de groupe)
 - [ ] Web of trust Niveau 0-1 (inscription ouverte + parrainage)
 - [ ] 10 testeurs (cellules militantes)
@@ -609,7 +622,7 @@ Niveau 3 — Collège (élection)
 | **Démarrage** | < 3 secondes |
 | **Latence messagerie** | < 1s (internet), < 5s (Reticulum WiFi), < 30s (LoRa) |
 | **Disponibilité nœud relais** | > 99 % (24/7) |
-| **Chiffrement** | X25519 + AES-256-GCM + Ed25519 (standard Signal/Nostr) |
+| **Chiffrement** | secp256k1 (signature) + NIP-44 ChaCha20-Poly1305 (E2E) |
 | **Stockage local** | SQLite chiffré (SQLCipher) |
 | **Compatibilité** | Windows 10+, macOS 12+, Linux (Debian 12+, Ubuntu 22.04+, Arch) |
 | **Mobile** | Phase 5 (après validation desktop) |
