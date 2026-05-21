@@ -668,7 +668,20 @@ Niveau 3 — Collège (élection)
 
 ## §11 Feuille de route
 
-### Phase 1 (0-3 mois) — MVP Coordination
+### Phase 0 (0-1 semaine) — EPIC 0 : Infrastructure & Setup
+
+- [ ] Structure Cargo workspace (rr-core, rr-cli, rr-tauri)
+- [ ] DevContainer + Docker Compose (nostr-relay, IPFS)
+- [ ] CI/CD GitHub Actions (lint + test + build)
+- [ ] rr-core: crypto (NIP-44, secp256k1) + identity + message (NIP-17)
+- [ ] rr-core: transport Nostr (WebSocket)
+- [ ] rr-cli: CLI complet (init, add-contact, send, sync)
+- [ ] Tests + docs + README
+
+**Budget** : 0 € (développement)
+**Critère de succès** : `git clone` + `cargo build` + `cargo test` fonctionne, CI green
+
+### Phase 1 (1-2 semaines) — EPIC 1 : POC "Premier Message Chiffré"
 
 - [ ] Client Tauri + Rust core (identité Nostr secp256k1)
 - [ ] Messagerie 1:1 E2E sur internet (NIP-17 + NIP-44 + NIP-59)
@@ -727,6 +740,99 @@ Niveau 3 — Collège (élection)
 | **Stockage local** | SQLite chiffré (SQLCipher) |
 | **Compatibilité** | Windows 10+, macOS 12+, Linux (Debian 12+, Ubuntu 22.04+, Arch) |
 | **Mobile** | Phase 5 (après validation desktop) |
+
+---
+
+## §12b Stratégie de packaging — Docker vs Natif
+
+### Principe fondamental
+
+| Type d'utilisateur | Packaging | Pourquoi |
+|---|---|---|
+| **Nœud Consommateur** (PC de l'utilisateur) | **Tauri natif** (.exe/.dmg/.deb) | Double-clic, < 15 Mo, pas de Docker à installer |
+| **Nœud Relais** (Pi 5) | **Docker Compose** | Infrastructure = Docker, c'est le standard. `docker compose up -d` |
+| **Nœud Créateur** (mini PC) | **Docker Compose** | PeerTube + Owncast + IPFS = containers |
+| **Développeur** | **DevContainer** (optionnel) | Environnement reproductible via VS Code |
+| **POC / CLI** | **Binaire Rust** (`cargo install`) | Pas besoin de container pour du CLI |
+
+### Pourquoi PAS Docker pour les consommateurs
+
+Un novice Windows veut : télécharger un `.exe` → double-cliquer → ça marche.
+
+Avec Docker, il doit : Windows Pro → WSL2 → Docker Desktop (2 Go) → redémarrer → comprendre volumes/ports/networks → `docker compose up -d` → debugger le port 8080 occupé → **90% abandonnent à l'étape 3**.
+
+### Architecture de packaging
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    UTILISATEUR FINAL (Consommateur)              │
+│                                                                 │
+│  Windows:  reseau-racine-setup.exe        (Tauri + WebView2)   │
+│  macOS:    reseau-racine.dmg              (Tauri + WebKit)     │
+│  Linux:    reseau-racine.deb / .AppImage  (Tauri + WebKitGTK)  │
+│                                                                 │
+│  Installation: double-clic, < 15 Mo, < 30s                     │
+│  Pas de Docker, pas de Node.js, pas de Rust                    │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│                    NŒUD RELAIS (Pi 5)                           │
+│                                                                 │
+│  curl -sL https://... | bash                                    │
+│                                                                 │
+│  Installe: Docker + Docker Compose                              │
+│  Lance: docker compose up -d                                    │
+│  Services: nostr-relay + IPFS + Reticulum + cache               │
+│                                                                 │
+│  Tout est containerisé, reproductible, mise à jour = pull       │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│                    NŒUD CRÉATEUR (mini PC)                      │
+│                                                                 │
+│  docker compose up -d                                           │
+│                                                                 │
+│  Services: PeerTube + Owncast + IPFS + nostr-relay              │
+│  Configuration: fichiers .env + volumes                        │
+│  Monitoring: logs Docker + health checks                        │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│                    DÉVELOPPEUR                                   │
+│                                                                 │
+│  Option A: DevContainer (VS Code)                               │
+│    → Ouvrir le repo → "Reopen in Container" → tout est prêt     │
+│                                                                 │
+│  Option B: Setup local                                          │
+│    → curl -sL https://... | bash → installe Rust + deps         │
+│    → cargo build → cargo test → cargo run                       │
+│                                                                 │
+│  CI/CD: GitHub Actions (lint + test + build sur push/PR)        │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Structure du repository (EPIC 0)
+
+```
+reseau-racine/
+├── Cargo.toml                    # Workspace root (resolver = "2")
+├── rust-toolchain.toml           # Rust version pinned
+├── .github/workflows/            # CI/CD: ci.yml, release.yml
+├── .devcontainer/                # DevContainer: devcontainer.json, Dockerfile, compose.yaml
+├── docker/                       # Docker configs pour relais/créateur
+│   ├── nostr-relay/
+│   └── ipfs/
+├── crates/
+│   ├── rr-core/                  # Bibliothèque core (crypto, identité, messages)
+│   ├── rr-cli/                   # CLI pour le POC (binaire)
+│   └── rr-tauri/                 # App Tauri (binaire desktop)
+├── ui/                           # Frontend Tauri (React + TypeScript)
+├── docs/superpowers/specs/       # Specs et EPICs
+├── tests/                        # Tests E2E + integration
+└── scripts/                      # Setup, test-e2e, release
+```
+
+Voir [EPIC 0 — Infrastructure & Setup](2026-05-21-epic-0-infrastructure-setup.md) pour le détail complet.
 
 ---
 
