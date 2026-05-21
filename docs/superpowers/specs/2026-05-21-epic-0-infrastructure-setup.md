@@ -32,7 +32,7 @@ reseau-racine/
 │   ├── nostr-relay/
 │   │   └── Dockerfile            # nostr-rs-relay custom config
 │   ├── ipfs/
-│   │   └── docker-compose.yml    # IPFS pinning service
+│   │   └── compose.yaml        # IPFS pinning service
 │   └── README.md                 # Comment lancer les services
 ├── crates/
 │   ├── rr-core/                  # Bibliothèque core (crypto, identité, messages)
