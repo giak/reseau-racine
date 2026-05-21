@@ -629,14 +629,34 @@ Niveau 3 — Collège (élection)
 
 | Composant | Technologie | Pourquoi |
 |-----------|------------|----------|
-| **UI** | Tauri + React | Léger, cross-platform (Windows/macOS/Linux), bundle < 10 Mo |
-| **Core** | Rust | Performance, sécurité mémoire, pure Rust crypto (pas de FFI C) |
+| **UI** | Tauri v2 + React + TypeScript | Léger (600 Ko-15 Mo), cross-platform, WebView native du système |
+| **Core** | Rust (workspace Cargo, resolver = "2") | Performance, sécurité mémoire, pure Rust crypto (pas de FFI C) |
 | **Crypto** | Crate `nostr` v0.44.2 (secp256k1 + NIP-44 ChaCha20-Poly1305 + NIP-59) | Support natif NIP-17, crates pures Rust auditables |
-| **Crypto (custom)** | `x25519-dalek` + `chacha20poly1305` + `ed25519-dalek` | Si besoin de crypto hors Nostr (Reticulum, groupes custom) |
-| **Storage** | SQLite + SQLCipher | Chiffré au repos, léger |
+| **Crypto (custom)** | `x25519-dalek` + `chacha20poly1305` | Si besoin de crypto hors Nostr (Reticulum, groupes custom) |
+| **Storage** | SQLx + SQLite | Chiffré au repos, léger, compile-time query validation |
 | **P2P** | libp2p (IPFS) + WebTorrent | Mature, écosystème large |
 | **Reticulum** | pythonreticulum (subprocess) ou reticulum-rs | Stack réseau off-grid |
 | **Nostr** | Crate `nostr` v0.44.2 + tokio-tungstenite | Écosystème existant, async WebSocket |
+
+### Architecture Tauri v2 — Standard 2026
+
+```
+crates/rr-tauri/
+├── Cargo.toml              # [lib] name = "rr_tauri_lib"
+├── tauri.conf.json         # Config Tauri v2 (identifier, bundle, updater)
+├── build.rs                # fn main() { tauri_build::build() }
+├── capabilities/
+│   └── default.json        # Permissions: quelles commandes le frontend peut appeler
+├── icons/                  # Générées par `tauri icon`
+└── src/
+    ├── main.rs             # Minimal: fn main() { rr_tauri_lib::run() }
+    ├── lib.rs              # Entry point principal + mobile_entry_point
+    ├── commands.rs         # #[tauri::command] functions
+    ├── state.rs            # State management (Mutex/RwLock)
+    └── error.rs            # Custom error types
+```
+
+> **Note** : Tauri v2 utilise `lib.rs` comme entry point principal. `main.rs` appelle juste `app_lib::run()`. Les commandes sont définies dans `commands.rs` et exposées via `#[tauri::command]`. Les permissions sont dans `capabilities/default.json` (remplace l'ancien allowlist).
 
 ### Interfaces
 

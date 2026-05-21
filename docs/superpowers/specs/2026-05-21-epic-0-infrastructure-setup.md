@@ -111,9 +111,14 @@ reseau-racine/
 
 | Composant | Rôle |
 |-----------|------|
-| `main.rs` | Entry point Tauri, enregistre les commands |
-| `lib.rs` | Bridge entre `rr-core` et l'UI React |
-| `tauri.conf.json` | Config Tauri v2 (window, bundle, updater) |
+| `lib.rs` | Entry point principal — Tauri commands, state management, `#[cfg_attr(mobile, tauri::mobile_entry_point)]` |
+| `main.rs` | Minimal — appelle juste `app_lib::run()` (standard Tauri v2) |
+| `commands.rs` | Commandes Tauri exposées au frontend (`#[tauri::command]`) |
+| `state.rs` | State management (`Mutex`/`RwLock` pour thread safety) |
+| `tauri.conf.json` | Config Tauri v2 (identifier, bundle, updater, frontend dev URL) |
+| `capabilities/default.json` | Permissions — quelles commandes le frontend peut appeler (OBLIGATOIRE Tauri v2) |
+| `build.rs` | `tauri_build::build()` — requis pour le build system Tauri |
+| `icons/` | Icônes générées par `tauri icon` |
 
 ### `ui/` (frontend React)
 
@@ -131,7 +136,7 @@ reseau-racine/
 
 Les développeurs. Pas les utilisateurs finaux.
 
-### Ce qu'il contient
+### `devcontainer.json`
 
 ```json
 {
@@ -150,9 +155,11 @@ Les développeurs. Pas les utilisateurs finaux.
     }
   },
   "features": {
-    "ghcr.io/devcontainers/features/rust:1": {}
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "lts"
+    }
   },
-  "postCreateCommand": "cargo build && cd ui && npm install"
+  "postCreateCommand": "cargo build --workspace && cd ui && npm ci"
 }
 ```
 
@@ -168,15 +175,22 @@ services:
       - ..:/workspace:cached
     command: sleep infinity
     depends_on:
-      - nostr-relay
-      - ipfs
+      nostr-relay:
+        condition: service_healthy
+      ipfs:
+        condition: service_started
 
   nostr-relay:
     image: scsibug/nostr-rs-relay:latest
     ports:
       - "8080:8080"
     volumes:
-      - ./docker/nostr-relay/config.toml:/app/config.toml
+      - ./docker/nostr-relay/config.toml:/app/config.toml:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   ipfs:
     image: ipfs/kubo:latest
@@ -194,9 +208,10 @@ volumes:
 ### `Dockerfile` (DevContainer)
 
 ```dockerfile
-FROM rust:1.85-slim-bookworm
+# Image officielle DevContainer Rust — outils pré-installés
+FROM mcr.microsoft.com/devcontainers/rust:1-bookworm
 
-# Dépendances système pour Tauri + libsodium
+# Dépendances système pour Tauri v2 + libsodium
 RUN apt-get update && apt-get install -y \
     libssl-dev \
     libgtk-3-dev \
@@ -206,14 +221,10 @@ RUN apt-get update && apt-get install -y \
     patchelf \
     libsodium-dev \
     pkg-config \
-    curl \
-    git \
-    nodejs \
-    npm \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Tauri CLI
-RUN cargo install tauri-cli --version "^2.0.0"
+RUN cargo install tauri-cli --locked
 
 WORKDIR /workspace
 ```
@@ -273,15 +284,25 @@ jobs:
 
   build-tauri:
     name: Build Tauri (Linux)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
-      - run: cd ui && npm install
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+      - run: cd ui && npm ci
       - uses: tauri-apps/tauri-action@v0
         with:
           projectPath: crates/rr-tauri
@@ -302,29 +323,61 @@ on:
       - "v*"
 
 jobs:
-  release-tauri:
+  publish-tauri:
+    permissions:
+      contents: write
     strategy:
       fail-fast: false
       matrix:
         include:
-          - platform: ubuntu-latest
+          - platform: ubuntu-22.04
             args: ""
           - platform: macos-latest
-            args: "--target universal-apple-darwin"
+            args: "--target aarch64-apple-darwin"
+          - platform: macos-latest
+            args: "--target x86_64-apple-darwin"
           - platform: windows-latest
             args: ""
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - uses: actions/setup-node@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          node-version: 20
-      - run: cd ui && npm install
-      - uses: tauri-apps/tauri-action@v0
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "./ -> target"
+
+      - name: Install system dependencies (Linux)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf
+
+      - name: Install frontend deps
+        run: cd ui && npm ci
+
+      - name: Build Tauri
+        uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "RéseauRacine ${{ github.ref_name }}"
