@@ -86,4 +86,6 @@ Couche 4 — Gouvernance (Cellules → Essaims → Collège → RIC)
 
 ## Licence
 
-À définir.
+Ce projet est sous licence **AGPL-3.0**. Voir [LICENSE](LICENSE) pour le texte complet.
+
+Toute modification, même déployée en réseau, doit être partagée sous la même licence.
