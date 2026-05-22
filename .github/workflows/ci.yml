@@ -78,37 +78,37 @@ jobs:
           tool: cargo-udeps
       - run: cargo +nightly udeps --workspace --exclude rr-tauri
 
-  coverage:
-    name: coverage
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: swatinem/rust-cache@v2
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-llvm-cov
-      - run: cargo llvm-cov --workspace --exclude rr-tauri --lcov --output-dir coverage
-      - uses: actions/upload-artifact@v4
-        with:
-          name: coverage-report
-          path: coverage/
+   coverage:
+     name: coverage
+     runs-on: ubuntu-latest
+     steps:
+       - uses: actions/checkout@v4
+       - uses: dtolnay/rust-toolchain@stable
+       - uses: swatinem/rust-cache@v2
+       - uses: taiki-e/install-action@v2
+         with:
+           tool: cargo-llvm-cov
+       - run: cargo llvm-cov --workspace --exclude rr-tauri --lcov --output-path coverage/lcov.info
+       - uses: actions/upload-artifact@v4
+         with:
+           name: coverage-report
+           path: coverage/lcov.info
 
-  mutants:
-    name: mutants
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: swatinem/rust-cache@v2
-      - run: cargo install cargo-mutants --locked
-      - run: cargo mutants --workspace --exclude rr-tauri
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: mutants-report
-          path: mutants-out/
+   mutants:
+     name: mutants
+     runs-on: ubuntu-latest
+     timeout-minutes: 45
+     steps:
+       - uses: actions/checkout@v4
+       - uses: dtolnay/rust-toolchain@stable
+       - uses: swatinem/rust-cache@v2
+       - run: cargo install cargo-mutants --locked
+       - run: cargo mutants --workspace --exclude rr-tauri --output mutants-out
+       - uses: actions/upload-artifact@v4
+         if: always()
+         with:
+           name: mutants-report
+           path: mutants-out/
 
   fuzz:
     name: fuzz
