@@ -16,14 +16,16 @@ Objectif : ajouter 3 outils sécurité standard 2026 pour couvrir les angles mor
 - `fuzz_identity_parse` : parsing nsec/npub/mnemonic invalides
 
 ### CI
-- Job `fuzz` dans `ci.yml`, nightly toolchain
+- Job `fuzz` dans `ci.yml`
+- nightly toolchain via `dtolnay/rust-toolchain@nightly`
+- Installation : `taiki-e/install-action@v2` avec `cargo-fuzz`
 - `cargo fuzz run <target> -- -max_total_time=120` (2 min / target)
-- Cache GitHub pour le corpus (prefix `fuzz-corpus-`)
-- `if: failure()` → upload artifacts pour post-mortem
+- Cache GitHub Actions pour le corpus (prefix `fuzz-corpus-`)
+- `if: failure()` → upload artifacts via `actions/upload-artifact@v4`
 
 ### Fichiers
 - `crates/rr-core/fuzz/` — targets + corpus
-- `crates/rr-core/fuzz/Cargo.toml` — workspace member
+- `crates/rr-core/fuzz/Cargo.toml` — workspace member (ajouter à `workspace.members` dans `Cargo.toml` root)
 - `.github/workflows/ci.yml` — nouveau job `fuzz`
 
 ---
@@ -32,9 +34,9 @@ Objectif : ajouter 3 outils sécurité standard 2026 pour couvrir les angles mor
 
 ### Implémentation
 - Nouveau job `udeps` dans `ci.yml`
-- `cargo +nightly install cargo-udeps --locked`
+- nightly toolchain via `dtolnay/rust-toolchain@nightly`
+- Installation : `taiki-e/install-action@v2` avec `cargo-udeps`
 - `cargo +nightly udeps --workspace --exclude rr-tauri`
-- nightly toolchain (cargo-udeps require nightly)
 
 ### Fichiers
 - `.github/workflows/ci.yml` — nouveau job `udeps`
@@ -44,12 +46,12 @@ Objectif : ajouter 3 outils sécurité standard 2026 pour couvrir les angles mor
 ## 3. cargo auditable — audit au niveau binaire
 
 ### Implémentation
-- Ajouter `cargo auditable` dans le job `build-cli`
-- `cargo auditable build --package rr-cli --release --locked` (remplace `cargo build`)
-- Optionnel : `cargo audit` sur le binaire dans une étape séparée
+- Ajouter `cargo install cargo-auditable --locked` dans le job `build-cli` (avant `cargo auditable build`)
+- Remplacer `cargo build` par `cargo auditable build --package rr-cli --release --locked`
+- Optionnel : `cargo audit binary ./target/release/rr` dans une étape séparée (nécessite `cargo install cargo-audit`)
 
 ### Note
-`cargo auditable` remplace `cargo build` dans `build-cli`. L'artefact produit contient la metadata des dépendances dans une section ELF dédiée. Utilisable plus tard par `cargo audit binary`.
+Le binaire produit contient la metadata des dépendances dans une section ELF dédiée. Utilisable plus tard par `cargo audit binary` sans avoir à re-scanner le workspace.
 
 ### Fichiers
 - `.github/workflows/ci.yml` — modifier job `build-cli`
