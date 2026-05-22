@@ -39,7 +39,7 @@ Prouve par le code/l'output/le test qui passe. Rapport sténographique : fait, t
 | **Check Main** | PR + 1 review + 6 status checks | User `giak` peut bypass |
 | **Protect Main** | Force push bloqué, deletion bloquée | **Aucun** (même admin) |
 
-6 status checks requis : `lint`, `test`, `audit`, `check-cross (macos-latest)`, `check-cross (windows-latest)`, `build-cli`.
+8 status checks requis : `lint`, `test`, `audit`, `fuzz`, `udeps`, `check-cross (macos-latest)`, `check-cross (windows-latest)`, `build-cli`.
 
 ```
 feature/<scope> → PR → CI green → squash merge → main

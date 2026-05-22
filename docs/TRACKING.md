@@ -41,6 +41,9 @@
 | **Tests (cargo test --workspace)** | ✅ 7/7 pass |
 | **Clippy** | ✅ 0 warnings |
 | **cargo-deny** | ✅ 4/4 OK |
+| **Fuzzing (NIP-44 roundtrip + decrypt invalid + identity parse)** | ✅ |
+| **cargo-udeps (unused dependencies CI)** | ✅ |
+| **cargo auditable (binary-level audit)** | ✅ |
 
 **Prochaine étape :** EPIC 1 — connecter la CLI à `nostr-relay:8080` et envoyer un message réel
 
