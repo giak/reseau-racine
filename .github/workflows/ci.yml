@@ -65,3 +65,14 @@ jobs:
         with:
           name: rr-cli-linux
           path: target/release/rr
+
+  udeps:
+    name: udeps
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-udeps
+      - run: cargo +nightly udeps --workspace --exclude rr-tauri
