@@ -1,0 +1,2 @@
+# Exclude binary entrypoints and fuzz targets — library code only
+exclude_globs = ["**/main.rs", "**/fuzz_targets/**"]

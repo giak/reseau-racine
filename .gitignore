@@ -5,4 +5,5 @@
 *.log
 node_modules/
 frontend/dist/
-.cargo/
+.cargo/config*
+.cargo/credentials
