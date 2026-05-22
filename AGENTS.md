@@ -28,6 +28,54 @@ Prouve par le code/l'output/le test qui passe. Rapport sténographique : fait, t
 
 ---
 
+# Development Workflow
+
+## Git & Branch Strategy
+
+`main` est protégée : PR obligatoire, 5 status checks (lint, test, audit, check-cross, build-cli), force push bloqué.
+
+```
+feature/<scope> → PR → CI green → squash merge → main
+```
+
+Pas de push direct sur `main`. Jamais de merge commit — `squash merge` seulement.
+
+### Commands
+```bash
+# Nouvelle branche
+git checkout -b feature/<scope>-<description>
+
+# PR (CLI)
+gh pr create --fill
+
+# After review + CI green
+gh pr merge --squash
+```
+
+## Superpowers Workflow
+
+Pour toute tâche de dev, l'agent utilise les skills superpowers dans cet ordre :
+
+| Phase | Skill | Quand |
+|-------|-------|-------|
+| **Spec** | brainstorming | Avant d'écrire du code. Raffine l'idée, propose un design, sauvegarde dans `docs/superpowers/specs/` |
+| **Plan** | writing-plans | Avec un design approuvé. Découpe en tâches de 2-5min avec fichiers exacts et vérifications |
+| **Implémentation** | subagent-driven-development ou executing-plans | Subagents parallèles avec review 2-stage (spec → code quality) ou par lots avec checkpoints |
+| **Tests** | test-driven-development | RED-GREEN-REFACTOR : test qui échoue → code minimal → test passe → refactor. Pas de code prod sans test qui échoue d'abord |
+| **Review** | requesting-code-review | Entre chaque tâche ou avant merge. Review contre le plan, issues par sévérité. Critical bloque |
+| **Fin** | finishing-a-development-branch | Tests OK → options merge/PR/keep/discard |
+
+L'agent invoque ces skills automatiquement avant chaque action. Pas optionnel.
+
+## Debugging
+
+Quand un bug est signalé :
+1. systematic-debugging — 4 phases : isolation → cause racine → fix → vérification
+2. test-driven-development — Test qui reproduit le bug d'abord (régression)
+3. verification-before-completion — Preuve que c'est fixé avant d'annoncer
+
+---
+
 # Project Commands
 
 All Rust commands run inside the dev container via `./scripts/dev.sh`.
