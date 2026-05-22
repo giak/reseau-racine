@@ -93,7 +93,6 @@ jobs:
         with:
           name: coverage-report
           path: coverage/lcov.info
-          path: coverage/lcov.info
 
   mutants:
     name: mutants
