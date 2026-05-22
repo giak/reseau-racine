@@ -78,6 +78,22 @@ jobs:
           tool: cargo-udeps
       - run: cargo +nightly udeps --workspace --exclude rr-tauri
 
+  coverage:
+    name: coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov
+      - run: cargo llvm-cov --workspace --exclude rr-tauri --lcov --output-dir coverage
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+
   fuzz:
     name: fuzz
     runs-on: ubuntu-latest
