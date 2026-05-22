@@ -1,0 +1,38 @@
+[package]
+name = "rr-core-fuzz"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+nostr = { version = "0.44", features = ["nip44"] }
+
+[dependencies.rr-core]
+path = ".."
+
+[[bin]]
+name = "fuzz_nip44_roundtrip"
+path = "fuzz_targets/fuzz_nip44_roundtrip.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_nip44_decrypt"
+path = "fuzz_targets/fuzz_nip44_decrypt.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_identity_parse"
+path = "fuzz_targets/fuzz_identity_parse.rs"
+test = false
+doc = false
+bench = false
+
+[workspace]
