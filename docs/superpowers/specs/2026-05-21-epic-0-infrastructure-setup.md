@@ -6,7 +6,7 @@
 
 ## Principe
 
-- **Docker pour les services** (Nostr relay, PeerTube, IPFS) → infrastructure
+- **Docker pour les services** (Nostr relay, IPFS) → infrastructure
 - **DevContainer pour les devs** → environnement reproductible (optionnel, VS Code)
 - **Binaire natif pour les utilisateurs** → Tauri (.exe/.dmg/.deb), PAS Docker
 - **Cargo workspace pour le code** → monorepo Rust, un `Cargo.lock`, deps partagées
@@ -18,6 +18,7 @@
 ```
 reseau-racine/
 ├── Cargo.toml                    # Workspace root (resolver = "2")
+├── deny.toml                     # cargo-deny: advisories, licences, bans
 ├── rust-toolchain.toml           # Rust version pinned (ex: 1.85.0)
 ├── .github/
 │   └── workflows/
@@ -39,14 +40,12 @@ reseau-racine/
 │   │   ├── Cargo.toml
 │   │   └── src/
 │   │       ├── lib.rs
-│   │       ├── crypto.rs         # NIP-44, secp256k1, X25519
+│   │       ├── crypto.rs         # NIP-44, secp256k1
 │   │       ├── identity.rs       # Génération/stockage de clés
 │   │       ├── message.rs        # NIP-17: rumor → seal → gift wrap
-│   │       └── transport/        # Abstraction multi-transport
-│   │           ├── mod.rs
-│   │           ├── nostr.rs      # Transport internet (WebSocket)
-│   │           ├── reticulum.rs  # Transport local (Reticulum)
-│   │           └── meshtastic.rs # Transport extrême (Meshtastic)
+│   │       └── transport/        # Trait abstrait multi-transport (implémentations futures)
+│   │           ├── mod.rs        # Trait TransportProvider
+│   │           └── nostr.rs      # Transport internet (WebSocket) — Phase 0
 │   ├── rr-cli/                   # CLI pour le POC (binaire)
 │   │   ├── Cargo.toml
 │   │   └── src/
@@ -58,7 +57,9 @@ reseau-racine/
 │       │   └── lib.rs            # Bridge core → UI
 │       ├── tauri.conf.json       # Config Tauri v2
 │       ├── build.rs
-│       └── icons/                # Icônes de l'app
+│       ├── icons/                # Icônes de l'app
+│       └── capabilities/
+│           └── default.json      # Permissions frontend (OBLIGATOIRE Tauri v2)
 ├── ui/                           # Frontend Tauri (React + TypeScript)
 │   ├── package.json
 │   ├── tsconfig.json
@@ -71,7 +72,10 @@ reseau-racine/
 │   └── superpowers/specs/        # Specs et EPICs
 ├── tests/
 │   ├── e2e/                      # Tests end-to-end (2 machines simulées)
-│   └── integration/              # Tests d'intégration (relais local)
+│   ├── integration/              # Tests d'intégration (relais local)
+│   ├── nip44_vectors.json        # Vecteurs KAT NIP-44 (vérifiés SHA256)
+│   ├── nip44_kat.rs              # Tests KAT: nostr::nip44 conforme au spec
+│   └── proptest.rs               # Property-based tests (invariants crypto)
 ├── scripts/
 │   ├── setup.sh                  # Setup dev (installe deps système)
 │   ├── test-e2e.sh               # Lance les tests E2E
@@ -81,6 +85,113 @@ reseau-racine/
 └── README.md                     # Documentation principale
 ```
 
+### `Cargo.toml` (Workspace root)
+
+```toml
+[workspace]
+resolver = "2"
+members = ["crates/*"]
+
+[workspace.package]
+edition = "2021"
+license = "AGPL-3.0-or-later"
+authors = ["RéseauRacine contributors"]
+
+[workspace.dependencies]
+nostr = { version = "0.44", features = ["nip44", "nip59", "nip06"] }
+nostr-sdk = { version = "0.44", features = ["nip44", "nip59"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+zeroize = { version = "1", features = ["zeroize_derive"] }
+tokio-tungstenite = "0.24"
+proptest = "1"              # Dev-dependency: property-based tests
+rusqlite = "0.39"           # Phase 1+ storage (feature "bundled" ou "bundled-sqlcipher")
+```
+
+> `[workspace.dependencies]` (Rust 1.64+) centralise les versions pour toutes les crates du workspace.
+
+### `rust-toolchain.toml`
+
+```toml
+[toolchain]
+channel = "1.85.0"
+components = ["rustfmt", "clippy"]
+targets = ["x86_64-unknown-linux-gnu", "aarch64-apple-darwin", "x86_64-apple-darwin", "x86_64-pc-windows-msvc"]
+```
+
+> Le fichier est implicite — pas besoin de `cargo install` manuel. Rustup l'utilise automatiquement.
+
+### `dependabot.yml` (`.github/dependabot.yml`)
+
+```yaml
+version: 2
+updates:
+  - package-ecosystem: cargo
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+  - package-ecosystem: npm
+    directory: "/ui"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: monthly
+```
+
+### Configuration management
+
+Les paramètres utilisateur (URL relais, timeout, API IPFS) sont stockés dans `~/.rr/config.toml` :
+
+```toml
+[relay]
+url = "wss://relay.reseau-racine.fr"
+
+[ipfs]
+api_url = "http://localhost:5001"
+
+[keys]
+path = "~/.rr/keys"
+```
+
+### Stockage local
+
+Phase 0 : fichiers JSON simples dans `~/.rr/`. Phase 1+ : SQLCipher (rusqlite).
+
+```
+~/.rr/
+├── config.toml        # Paramètres (URL relais, timeout)
+├── keys.json           # Clé privée (seed BIP-39 + nsec), permissions 0600
+├── contacts.json       # Carnet d'adresses (npub → nom, relais)
+└── data/               # Messages reçus (fichiers JSON par conversation)
+    └── <pubkey>.json
+```
+
+> Phase 0 : pas de SQLCipher (6 dépendances lourdes, overkill pour POC). JSON + `zeroize` + permissions 0600 suffisent. Les messages sont stockés chiffrés (NIP-44 output). Phase 1+ : migration vers `rusqlite` avec feature `bundled-sqlcipher` (compile SQLCipher from source, pas besoin d'openssl système).
+
+### Backup & recovery (BIP-39 seed phrase)
+
+```rust
+use nostr::nips::nip06;
+
+// Phase 0: `rr init` génère une seed phrase de 12 mots
+let mnemonic = nip06::Mnemonic::generate(12)?;
+let keys = Keys::from_mnemonic(&mnemonic, "")?;
+
+// Affiche seed phrase + nsec
+println!("SEED PHRASE (notez ces 12 mots): {}", mnemonic);
+println!("nsec (alternative): {}", keys.secret_key().to_bech32()?);
+
+// Restore: rr restore <12words> ou rr restore nsec1...
+let restored = Keys::from_mnemonic(&input_mnemonic, "")?;
+```
+
+> L'utilisateur note sa seed phrase (12 mots BIP-39) sur papier, pas de fichier numérique. Import : `rr restore "word1 word2 ... word12"`. Phase 1+ : backup chiffré vers relais privé (NIP-44 sur kind 10002).
+
 ---
 
 ## Ce que chaque composant fait
@@ -89,12 +200,10 @@ reseau-racine/
 
 | Module | Rôle | Dépendances |
 |--------|------|------------|
-| `crypto` | NIP-44 V2 (ChaCha20-Poly1305), secp256k1, X25519 | `nostr` crate, `x25519-dalek`, `chacha20poly1305` |
-| `identity` | Génération/stockage de clés secp256k1, nsec/npub | `nostr` crate, `zeroize` |
-| `message` | NIP-17: rumor → seal → gift wrap, unwrap | `nostr` crate, `serde_json` |
-| `transport::nostr` | WebSocket vers relais Nostr, publish, subscribe | `tokio-tungstenite`, `serde_json` |
-| `transport::reticulum` | Communication via Reticulum (subprocess ou FFI) | `tokio`, `serde` |
-| `transport::meshtastic` | Communication via Meshtastic (API HTTP) | `reqwest`, `serde` |
+| `crypto` | NIP-44 V2, ECDH secp256k1, keystore | `nostr` (NIP-44), `zeroize` |
+| `identity` | Génération/stockage de clés secp256k1, nsec/npub | `nostr` (Keys, SecretKey), `zeroize` |
+| `message` | NIP-17: send_private_msg, unwrap_gift_wrap | `nostr-sdk` (Client), `nostr` (types) |
+| `transport::nostr` | WebSocket vers relais Nostr, publish, subscribe | `nostr-sdk` (Client, RelayPool) |
 
 ### `rr-cli` (binaire CLI — POC)
 
@@ -119,6 +228,29 @@ reseau-racine/
 | `capabilities/default.json` | Permissions — quelles commandes le frontend peut appeler (OBLIGATOIRE Tauri v2) |
 | `build.rs` | `tauri_build::build()` — requis pour le build system Tauri |
 | `icons/` | Icônes générées par `tauri icon` |
+
+### `capabilities/default.json` (Exemple Tauri v2)
+
+```json
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main-capability",
+  "description": "Permissions pour la fenêtre principale",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "core:path:default",
+    "core:event:default",
+    "core:window:default",
+    "core:app:default",
+    "core:resources:default",
+    "core:menu:default",
+    "core:tray:default"
+  ]
+}
+```
+
+> Les permissions sont formatées `${plugin}:${command}:${action}`. Les sets `:default` regroupent les permissions raisonnables. Fichier auto-généré dans `gen/schemas/` par `tauri-build`. Phase 1+ (Tauri app) ajoute `shell:allow-open`, `dialog:default`, `fs:allow-read/write`.
 
 ### `ui/` (frontend React)
 
@@ -199,10 +331,15 @@ services:
       - "5001:5001"
       - "8081:8080"
     volumes:
-      - ipfs-data:/data/ipfs
+      - rr-ipfs-data:/data/ipfs
+    healthcheck:
+      test: ["CMD", "ipfs", "id"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 volumes:
-  ipfs-data:
+  rr-ipfs-data:
 ```
 
 ### `Dockerfile` (DevContainer)
@@ -224,33 +361,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Tauri CLI
-RUN cargo install tauri-cli --locked
-
 WORKDIR /workspace
 ```
 
-> **Note** : `bookworm-slim` (70 Mo) vs `bookworm` (120 Mo). `--no-install-recommends` évite les paquets optionnels. Alpine impossible — musl libc incompatible avec webkit2gtk (requis par Tauri v2). Wolfi/Chainguard pas de paquets GTK disponibles.
-
-> **Note** : `bookworm-slim` (70 Mo) vs `bookworm` (120 Mo). `--no-install-recommends` évite les paquets optionnels. Alpine impossible — musl libc incompatible avec webkit2gtk (requis par Tauri v2). Wolfi/Chainguard pas de paquets GTK disponibles.
-
-> **Note** : Alpine (~5 Mo) est impossible car musl libc n'est pas compatible avec webkit2gtk (glibc requis par Tauri v2). Bookworm-slim est le plus léger viable pour un devcontainer Rust + Tauri. Le vrai poids vient des dépendances GTK/webkit (~600 Mo après installation), pas de l'image de base.
-
-> **Note** : `bookworm-slim` (70 Mo) vs `bookworm` (120 Mo). `--no-install-recommends` évite les paquets optionnels. Alpine impossible — musl libc incompatible avec webkit2gtk (requis par Tauri v2). Wolfi/Chainguard pas de paquets GTK disponibles.
-
-> **Note** : `bookworm-slim` (70 Mo) vs `bookworm` (120 Mo). `--no-install-recommends` évite les paquets optionnels. Alpine impossible — musl libc incompatible avec webkit2gtk (requis par Tauri v2). Wolfi/Chainguard pas de paquets GTK disponibles.
-
-> **Note** : `bookworm-slim` (70 Mo) vs `bookworm` (120 Mo). `--no-install-recommends` évite les paquets optionnels. Alpine impossible — musl libc incompatible avec webkit2gtk (requis par Tauri v2). Wolfi/Chainguard pas de paquets GTK disponibles.
-
-> **Note taille** : Alpine (~5 Mo base) impossible car pas de webkit2gtk/GTK3 (musl libc). Chainguard/Wolfi trop limités pour le dev. Bookworm-slim est le meilleur compromis. Le vrai poids vient des dépendances Tauri (~800 Mo installées), pas de l'image de base.
-
-> **Note** : `bookworm-slim` (70 Mo) vs `bookworm` (120 Mo). `--no-install-recommends` évite les paquets optionnels. Alpine impossible — musl libc incompatible avec webkit2gtk (requis par Tauri v2). Wolfi/Chainguard pas de paquets GTK disponibles.
-
-> **Note** : `bookworm-slim` (70 Mo) vs `bookworm` (120 Mo). `--no-install-recommends` évite les paquets optionnels. Alpine impossible — musl libc incompatible avec webkit2gtk (requis par Tauri v2). Wolfi/Chainguard pas de paquets GTK disponibles.
-
-> **Note** : `bookworm-slim` (70 Mo) vs `bookworm` (120 Mo). `--no-install-recommends` évite les paquets optionnels. Alpine impossible — musl libc incompatible avec webkit2gtk (requis par Tauri v2). Wolfi/Chainguard pas de paquets GTK disponibles.
-
-> **Note** : `bookworm-slim` (70 Mo) vs `bookworm` (120 Mo). `--no-install-recommends` évite les paquets optionnels. Alpine impossible — musl libc incompatible avec webkit2gtk (requis par Tauri v2).
+> **Note** : image dev = `bookworm-slim` (70 Mo). Alternative Alpine impossible — musl libc incompatible avec webkit2gtk. `--no-install-recommends` évite les paquets optionnels. Le vrai poids (~800 Mo) vient des dépendances Tauri, pas de l'image de base. `cargo install tauri-cli` prend ~5min unique à la création de l'image ; alternative `npm install -D @tauri-apps/cli` dans le frontend si le temps de build pose problème.
 
 ---
 
@@ -290,7 +404,29 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: cargo test --workspace --verbose
+      - run: cargo test --workspace --locked --verbose
+
+  audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo install cargo-deny --locked
+      - run: cargo-deny check advisories bans licenses sources
+
+  check-cross:
+    name: Check (macOS + Windows)
+    strategy:
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo check --workspace --locked
 
   build-cli:
     name: Build CLI (Linux)
@@ -299,7 +435,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: cargo build --package rr-cli --release
+      - run: cargo build --package rr-cli --release --locked
       - uses: actions/upload-artifact@v4
         with:
           name: rr-cli-linux
@@ -307,7 +443,7 @@ jobs:
 
   build-tauri:
     name: Build Tauri (Linux)
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -353,7 +489,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: ubuntu-22.04
+          - platform: ubuntu-24.04
             args: ""
           - platform: macos-latest
             args: "--target aarch64-apple-darwin"
@@ -383,7 +519,7 @@ jobs:
           workspaces: "./ -> target"
 
       - name: Install system dependencies (Linux)
-        if: matrix.platform == 'ubuntu-22.04'
+        if: matrix.platform == 'ubuntu-24.04'
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -413,6 +549,83 @@ jobs:
 
 ---
 
+## Stratégie relais Nostr (NIP-65)
+
+### Phase 0 (POC)
+
+- **1 relais local** (DevContainer `nostr-rs-relay` sur `localhost:8080`)
+- **1 relais public configurable** (default `wss://relay.reseau-racine.fr` si déployé, sinon `wss://nos.lol`)
+
+Communication via `nostr-sdk` — subscriptions persistantes (WebSocket), **pas de polling HTTP**. Le client écoute en continu les événements `kind=1059` (gift wrap) via un filtre avec `since=now`. Pas de requête périodique = pas de corrélation temporelle exploitable.
+
+### Phase 1+ (production)
+
+Chaque utilisateur publie un événement `kind:10002` (NIP-65) listant ses relais :
+
+```json
+{
+  "kind": 10002,
+  "tags": [
+    ["r", "wss://relay1.reseau-racine.fr", "write"],
+    ["r", "wss://relay2.example.com", "read"]
+  ]
+}
+```
+
+- L'expéditeur lit le `kind:10002` du destinataire
+- Envoie le gift wrap aux **read relays** du destinataire
+- Taille recommandée : 2-4 relais par catégorie
+
+---
+
+## Tauri v2 auto-updater
+
+### Génération des clés (one-time, env de dev)
+
+```bash
+npm run tauri signer generate -- -w ~/.tauri/reseau-racine.key
+```
+
+Fichiers créés :
+- `~/.tauri/reseau-racine.key` → **PRIVÉ**, jamais commité, stocké dans GitHub Secrets
+- `~/.tauri/reseau-racine.key.pub` → copié dans `tauri.conf.json` (sûr à commiter)
+
+### Configuration `tauri.conf.json`
+
+```json
+{
+  "bundle": {
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "active": true,
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDM4NDVDMEIyQ0ExN0IwRjk...",
+      "endpoints": [
+        "https://github.com/reseau-racine/reseau-racine/releases/latest/download/latest.json"
+      ]
+    }
+  }
+}
+```
+
+### CI (GitHub Actions)
+
+Les secrets nécessaires :
+- `TAURI_SIGNING_PRIVATE_KEY` → contenu de `reseau-racine.key`
+- `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` → mot de passe (optionnel)
+
+Le workflow `release.yml` (déjà défini) utilise ces secrets via `tauri-action@v0`. L'action génère automatiquement le `latest.json` avec les signatures et l'upload sur GitHub Releases.
+
+### Vérification
+
+- Signature Ed25519, vérifiée avant installation
+- HTTPS uniquement (TLS enforced)
+- Échec de vérification = mise à jour annulée
+- `latest.json` contient : version, notes, pub_date, signatures + URLs par plateforme
+
+---
+
 ## Docker — Services d'infrastructure
 
 ### Ce qui tourne dans Docker
@@ -421,8 +634,8 @@ jobs:
 |---------|-------|-------|
 | **nostr-rs-relay** | `scsibug/nostr-rs-relay` | Relais Nostr local pour tests et production |
 | **IPFS (kubo)** | `ipfs/kubo` | Pinning de contenu, mirror d'articles |
-| **PeerTube** | `chocobozzz/peertube` | Hébergement vidéo (nœud créateur) |
-| **Owncast** | `owncast/owncast` | Streaming live (nœud créateur) |
+
+> PeerTube (hébergement vidéo) et Owncast (streaming) sont déployés en Phase 2 — pas dans l'infra de dev initiale.
 
 ### Ce qui NE tourne PAS dans Docker
 
@@ -440,14 +653,30 @@ jobs:
 |---------|-------------|
 | **`git clone` + `cargo build`** fonctionne | Sur Linux, macOS, Windows (WSL2) |
 | **`cargo test --workspace`** passe | 100% des tests passent |
+| **Tests KAT NIP-44** inclus | Vecteurs de test officiels du NIP-44 V2 |
 | **`cargo fmt --check`** passe | Code formaté |
 | **`cargo clippy`** passe | Pas de warnings |
+| **`cargo-deny`** passe | Aucun advisory, license, ou ban violé |
 | **DevContainer** se lance | `docker compose up -d` dans `.devcontainer/` |
-| **CI green** sur push | GitHub Actions: lint + test + build |
+| **CI green** sur push | GitHub Actions: lint + test + audit + build |
 | **POC CLI** fonctionne | `rr init` → `rr send` → `rr sync` entre 2 terminaux |
 | **README** documente le setup | Un novice peut suivre les étapes |
 
 ---
+
+## Stratégie de test
+
+| Type | Outil | Couvre |
+|------|-------|--------|
+| **Unitaires** | `cargo test` | Crypto (NIP-44 encrypt/decrypt, ECDH), messages (wrap/unwrap), identity (clés, nsec) |
+| **KAT (Known Answer Tests)** | `nip44_vectors.json` + `nip44_kat.rs` | Vecteurs officiels NIP-44 V2 (paulmillr/nip44, SHA256:269ed0f6). Vérifie que nostr::nip44 encrypt/decrypt produit les outputs conformes. |
+| **Property-based** | `proptest` (ajouté à `rr-core`) | Invariants : `decrypt(encrypt(m)) == m`, clé différente → échec, messages extrêmes (1 octet à 64KB), messages vides rejetés |
+| **Intégration** | `tests/integration/` | Client serveur nostr local, round-trip message |
+| **E2E** | `tests/e2e/` | 2 processus CLI simulés (Alice → relais → Bob), validation du flux complet |
+
+> Les tests KAT sont **obligatoires** pour la crypto. `nip44_vectors.json` est téléchargé depuis [paulmillr/nip44](https://github.com/paulmillr/nip44/blob/master/nip44.vectors.json) et vérifié contre SHA256 `269ed0f69e4c192512cc779e78c555090cebc7c785b609e338a62afc3ce25040`. Le fichier contient les vecteurs `valid.encrypt_decrypt`, `invalid.decrypt`, `valid.get_conversation_key`, etc.
+>
+> **Property-based** : `proptest` génère des messages aléatoires (1 octet à 64KB, UTF-8, binaire). Invariants testés : `decrypt(encrypt(m, k_alice, k_bob), k_bob, k_alice) == m`, clé différente → erreur, padding valide après round-trip. Lancement : `PROPTEST_CASES=1000 cargo test --test proptest`.
 
 ## Timeline estimée
 
@@ -470,6 +699,6 @@ jobs:
 1. **EPIC 1 — POC "Premier Message Chiffré"** (14h) — Alice et Bob échangent un message via NIP-17 + NIP-44 + NIP-59
 2. **EPIC 2 — Groupes & Cellules** — NIP-44 + clé de groupe X25519, cellules de 3 (Double Ratchet optionnel via sender-keys si conditions remplies)
 3. **EPIC 3 — Reticulum WiFi** — Second transport, bascule automatique
-4. **EPIC 4 — Client Tauri** — UI React, chat, contacts, paramètres
-5. **EPIC 5 — Client Tauri** — UI React, chat, contacts, paramètres
+4. **EPIC 4 — Client Tauri** — UI React, chat, contacts, notifications
+5. **EPIC 5 — Forward Secrecy** — Double Ratchet (si conditions remplies : audit OU merge rust-nostr OU NIP standardisé)
 6. **EPIC 6 — Nœud Relais** — Pi 5 + Docker Compose + cache + IPFS

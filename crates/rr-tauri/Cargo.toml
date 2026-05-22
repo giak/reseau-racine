@@ -1,0 +1,25 @@
+[package]
+name = "rr-tauri"
+version = "0.1.0"
+description = "RéseauRacine desktop app (Tauri v2)"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "rr_tauri_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+rr-core = { path = "../rr-core" }
+tauri = { version = "2", features = [] }
+tauri-plugin-shell = "2"
+serde.workspace = true
+serde_json.workspace = true
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]

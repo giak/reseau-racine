@@ -1,0 +1,17 @@
+[package]
+name = "rr-core"
+version = "0.1.0"
+description = "RéseauRacine core library: crypto, identity, messages, transport"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+nostr.workspace = true
+nostr-sdk.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+bip39.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true

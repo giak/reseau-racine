@@ -1,0 +1,20 @@
+{
+  "name": "RéseauRacine",
+  "image": "mcr.microsoft.com/devcontainers/rust:latest",
+  "features": {
+    "ghcr.io/devcontainers/features/rust:1": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "rust-lang.rust-analyzer",
+        "tamasfe.even-better-toml",
+        "vadimcn.vscode-lldb"
+      ]
+    }
+  },
+  "postCreateCommand": "cargo check --workspace",
+  "mounts": [
+    "source=${env:HOME}${env:USERPROFILE}/.rr,target=/home/vscode/.rr,type=bind,consistency=cached"
+  ]
+}
