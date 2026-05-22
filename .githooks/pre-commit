@@ -1,0 +1,11 @@
+#!/bin/sh
+set -euo pipefail
+
+echo "=== pre-commit: rustfmt ==="
+cargo fmt --all --check
+
+echo "=== pre-commit: clippy ==="
+cargo clippy --workspace --exclude rr-tauri -- -D warnings
+
+echo "=== pre-commit: test ==="
+cargo test --workspace --exclude rr-tauri --locked
