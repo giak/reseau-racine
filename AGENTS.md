@@ -108,11 +108,3 @@ All Rust commands run inside the dev container via `./scripts/dev.sh`.
 docker compose -f .devcontainer/compose.yaml {logs -f,restart} nostr-relay
 ```
 
-## Pre-commit check (must pass before push)
-```bash
-./scripts/dev.sh sh -c "\
-  cargo fmt --all --check && \
-  cargo check --workspace --exclude rr-tauri && \
-  cargo test --package rr-core && \
-  cargo clippy --package rr-core --package rr-cli -- -D warnings"
-```
