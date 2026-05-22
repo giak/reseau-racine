@@ -1,0 +1,9 @@
+{
+    "files.exclude": {
+        "target/": true
+    },
+    "search.exclude": {
+        "target/": true
+    },
+    "rust-analyzer.cargo.features": ["nip44", "nip59", "nip06"]
+}
