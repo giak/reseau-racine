@@ -60,7 +60,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: swatinem/rust-cache@v2
-      - run: cargo build --package rr-cli --release --locked
+      - run: cargo install cargo-auditable --locked
+      - run: cargo auditable build --package rr-cli --release --locked
       - uses: actions/upload-artifact@v4
         with:
           name: rr-cli-linux
@@ -76,3 +77,33 @@ jobs:
         with:
           tool: cargo-udeps
       - run: cargo +nightly udeps --workspace --exclude rr-tauri
+
+  fuzz:
+    name: fuzz
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target:
+          - fuzz_nip44_roundtrip
+          - fuzz_nip44_decrypt
+          - fuzz_identity_parse
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-fuzz
+      - name: Restore corpus cache
+        uses: actions/cache@v4
+        with:
+          path: crates/rr-core/fuzz/corpus/${{ matrix.target }}
+          key: fuzz-corpus-${{ matrix.target }}-${{ github.sha }}
+          restore-keys: |
+            fuzz-corpus-${{ matrix.target }}-
+      - run: cargo fuzz run ${{ matrix.target }} -- -max_total_time=120
+        working-directory: crates/rr-core
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: fuzz-artifacts-${{ matrix.target }}-${{ github.sha }}
+          path: crates/rr-core/fuzz/artifacts/
