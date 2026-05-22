@@ -43,7 +43,8 @@ mod tests {
         let (alice, bob) = alice_bob();
         let msg = "Hello RéseauRacine!";
         let cipher = encrypt(msg, &alice, &bob);
-        let plain = CryptoProvider::decrypt(bob.secret_key(), &alice.public_key(), &cipher).unwrap();
+        let plain =
+            CryptoProvider::decrypt(bob.secret_key(), &alice.public_key(), &cipher).unwrap();
         assert_eq!(plain, msg);
     }
 
@@ -68,7 +69,8 @@ mod tests {
         let (alice, bob) = alice_bob();
         let msg = "A".repeat(10000);
         let cipher = encrypt(&msg, &alice, &bob);
-        let plain = CryptoProvider::decrypt(bob.secret_key(), &alice.public_key(), &cipher).unwrap();
+        let plain =
+            CryptoProvider::decrypt(bob.secret_key(), &alice.public_key(), &cipher).unwrap();
         assert_eq!(plain, msg);
     }
 
@@ -85,7 +87,8 @@ mod tests {
         let (alice, bob) = alice_bob();
         let msg = "éèêëàâäùûüôöîïç€œæ🌿🔑 ∑∏∫ ≤ ≥ ∞ 你好 👋";
         let cipher = encrypt(msg, &alice, &bob);
-        let plain = CryptoProvider::decrypt(bob.secret_key(), &alice.public_key(), &cipher).unwrap();
+        let plain =
+            CryptoProvider::decrypt(bob.secret_key(), &alice.public_key(), &cipher).unwrap();
         assert_eq!(plain, msg);
     }
 
@@ -100,7 +103,8 @@ mod tests {
     fn test_sender_decrypts_own_message() {
         let (alice, bob) = alice_bob();
         let cipher = encrypt("self-test", &alice, &bob);
-        let plain = CryptoProvider::decrypt(alice.secret_key(), &bob.public_key(), &cipher).unwrap();
+        let plain =
+            CryptoProvider::decrypt(alice.secret_key(), &bob.public_key(), &cipher).unwrap();
         assert_eq!(plain, "self-test");
     }
 

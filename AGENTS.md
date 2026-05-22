@@ -40,6 +40,8 @@ feature/<scope> → PR → CI green → squash merge → main
 
 Pas de push direct sur `main`. Jamais de merge commit — `squash merge` seulement.
 
+**CI doit être verte avant merge.** Si un check échoue, on fixe, on pousse, on attend la re-vérification. Un merge rouge n'existe pas. Les 5 checks : lint, test, audit, check-cross, build-cli.
+
 ### Commands
 ```bash
 # Nouvelle branche
@@ -97,7 +99,11 @@ All Rust commands run inside the dev container via `./scripts/dev.sh`.
 docker compose -f .devcontainer/compose.yaml {logs -f,restart} nostr-relay
 ```
 
-## Quick check
+## Pre-commit check (must pass before push)
 ```bash
-./scripts/dev.sh sh -c "cargo check --workspace --exclude rr-tauri && cargo test --package rr-core && cargo clippy --package rr-core --package rr-cli"
+./scripts/dev.sh sh -c "\
+  cargo fmt --all --check && \
+  cargo check --workspace --exclude rr-tauri && \
+  cargo test --package rr-core && \
+  cargo clippy --package rr-core --package rr-cli -- -D warnings"
 ```
