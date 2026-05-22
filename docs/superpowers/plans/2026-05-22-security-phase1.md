@@ -403,3 +403,76 @@ Add to EPIC 0 table:
 git add docs/TRACKING.md
 git commit -m "doc: track Phase 1 sécurité (fuzz + udeps + auditable)"
 ```
+
+---
+
+## Implementation Notes (post-PR #4)
+
+### Corrections apportées au plan initial
+
+#### 1. fuzz/Cargo.toml : [[bin]] sections requises
+Le plan initial omettait les entrées `[[bin]]`. cargo-fuzz (v0.13.x) nécessite des entrées `[[bin]]` explicites pointant vers chaque fuzz target, comme généré par `cargo fuzz init` :
+```toml
+[[bin]]
+name = "fuzz_nip44_roundtrip"
+path = "fuzz_targets/fuzz_nip44_roundtrip.rs"
+test = false
+doc = false
+bench = false
+```
+
+#### 2. Dépendance `nostr` directe requise
+Les fuzz targets utilisent `nostr::nips::nip44::{encrypt, decrypt}` et `nostr::SecretKey::from_slice` directement (pas via rr_core). Ajouter :
+```toml
+[dependencies]
+nostr = { version = "0.44", features = ["nip44"] }
+```
+
+#### 3. API NIP-44 différente
+Le plan utilisait `nip44::encrypt(payload, &conv_key)` (bas niveau, par ConversationKey).
+L'API réelle (`nostr 0.44.x`) est :
+```rust
+// Haut niveau (base64) — ce qu'on utilise dans les fuzz targets
+nip44::encrypt(&sk, &pk, payload, Version::V2)  // → Result<String, Error>
+nip44::decrypt(&sk, &pk, &ciphertext)            // → Result<String, Error>
+
+// Conversion SecretKey → PublicKey via secp256k1
+let secp = secp256k1::Secp256k1::new();
+let pk_secp = secp256k1::PublicKey::from_secret_key(&secp, &secp_sk);
+let (xonly, _) = pk_secp.x_only_public_key();
+let pk = nostr::PublicKey::from(xonly);
+```
+Disponible via `nostr::secp256k1` (nostr re-exporte `pub extern crate secp256k1`).
+
+#### 4. fuzz/.gitignore nécessaire
+```gitignore
+target/
+```
+Sans ça, `git add crates/rr-core/fuzz/` capture les binaires de build (20+ MB chacun).
+
+### CI Troubleshooting
+
+#### Problème : musl/ASAN incompatibility
+cargo-fuzz précompilé par `taiki-e/install-action@v2` détecte `x86_64-unknown-linux-musl` comme host.
+AddressSanitizer incompatible avec musl statique.
+
+**Solution :** `--target $(rustc --print host-tuple)` (issue cargo-fuzz #398)
+
+**Tentatives échouées :**
+1. `cargo +nightly install cargo-fuzz --locked` — `rustix` utilise attributes nightly-only
+2. `RUSTFLAGS=-Ctarget-feature=-crt-static` — overridé par cargo-fuzz
+3. `rustup target add x86_64-unknown-linux-musl` — ASAN toujours incompatible
+
+#### working-directory
+Le plan utilisait `working-directory: crates/rr-core/fuzz`. La commande correcte est :
+```yaml
+- run: cargo +nightly fuzz run --target $(rustc --print host-tuple) ${{ matrix.target }} -- -max_total_time=120
+  working-directory: crates/rr-core
+```
+cargo-fuzz cherche `./fuzz/` relatif au working directory.
+
+### Résultat
+- PR #4 mergée, tous les 10 jobs CI verts
+- 8 status checks dans Ruleset Check Main
+- Tests : 29 pass (inchangé)
+- Le fuzzer tourne 2 min par target avec corpus cache

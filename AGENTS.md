@@ -36,7 +36,7 @@ Prouve par le code/l'output/le test qui passe. Rapport sténographique : fait, t
 
 | Ruleset | Règles | Bypass |
 |---------|--------|--------|
-| **Check Main** | PR + 1 review + 6 status checks | User `giak` peut bypass |
+| **Check Main** | PR + 1 review + 8 status checks | User `giak` peut bypass |
 | **Protect Main** | Force push bloqué, deletion bloquée | **Aucun** (même admin) |
 
 8 status checks requis : `lint`, `test`, `audit`, `fuzz`, `udeps`, `check-cross (macos-latest)`, `check-cross (windows-latest)`, `build-cli`.
@@ -121,4 +121,16 @@ All Rust commands run inside the dev container via `./scripts/dev.sh`.
 ```bash
 docker compose -f .devcontainer/compose.yaml {logs -f,restart} nostr-relay
 ```
+
+## CI Known Issues
+
+### cargo-fuzz host target detection
+cargo-fuzz précompilé par `taiki-e/install-action@v2` détecte `x86_64-unknown-linux-musl` au lieu de `x86_64-unknown-linux-gnu` sur GitHub Actions. L'AddressSanitizer est incompatible avec musl statique.
+
+**Fix :** toujours utiliser `--target $(rustc --print host-tuple)` dans les commandes cargo-fuzz (issue cargo-fuzz#398).
+```bash
+cargo +nightly fuzz run --target $(rustc --print host-tuple) <target> -- -max_total_time=120
+```
+
+Ne pas installer cargo-fuzz via `cargo install` — `rustix` dépend d'attributs nightly-only non stables.
 
