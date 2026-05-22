@@ -44,12 +44,16 @@ Pas de push direct sur `main`. Jamais de merge commit — `squash merge` seuleme
 
 ### Pre-commit Hook (automatique)
 
-Un pre-commit hook est installé automatiquement via `rhusky` (dans `crates/rr-core/build.rs`). Lance 3 checks avant chaque `git commit` :
+Un pre-commit hook est versionné dans `.githooks/pre-commit`. Lance 3 checks avant chaque `git commit` :
 1. `cargo fmt --all --check`
 2. `cargo clippy --workspace --exclude rr-tauri -- -D warnings`
 3. `cargo test --workspace --exclude rr-tauri --locked`
 
-Si un check échoue → commit bloqué. Le hook est versionné dans `.githooks/pre-commit` et s'installe automatiquement au premier `cargo build`/`cargo test`. Pas d'action manuelle.
+Si un check échoue → commit bloqué. Installation une fois :
+```bash
+make hooks
+# ou : git config core.hooksPath .githooks
+```
 
 ### Commands
 ```bash

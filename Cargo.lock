@@ -3079,12 +3079,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rhusky"
-version = "0.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d3b2a92af8979b16329f2109d07a674c2f1b79c5e8c5c905740d792962051a22"
-
-[[package]]
 name = "ring"
 version = "0.17.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3119,7 +3113,6 @@ dependencies = [
  "nostr",
  "nostr-sdk",
  "proptest",
- "rhusky",
  "serde",
  "serde_json",
 ]
