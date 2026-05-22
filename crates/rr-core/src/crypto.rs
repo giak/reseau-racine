@@ -36,8 +36,7 @@ mod tests {
         let bob = Keys::generate();
         let msg = "Hello RéseauRacine!";
 
-        let cipher =
-            CryptoProvider::encrypt(alice.secret_key(), &bob.public_key(), msg).unwrap();
+        let cipher = CryptoProvider::encrypt(alice.secret_key(), &bob.public_key(), msg).unwrap();
         let plain =
             CryptoProvider::decrypt(bob.secret_key(), &alice.public_key(), &cipher).unwrap();
 
@@ -51,8 +50,7 @@ mod tests {
         let eve = Keys::generate();
         let msg = "secret";
 
-        let cipher =
-            CryptoProvider::encrypt(alice.secret_key(), &bob.public_key(), msg).unwrap();
+        let cipher = CryptoProvider::encrypt(alice.secret_key(), &bob.public_key(), msg).unwrap();
         let result = CryptoProvider::decrypt(eve.secret_key(), &alice.public_key(), &cipher);
 
         assert!(result.is_err());

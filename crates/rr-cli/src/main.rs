@@ -16,23 +16,15 @@ enum Commands {
     /// Afficher l'identité courante
     Identity,
     /// Ajouter un contact
-    AddContact {
-        npub: String,
-        name: String,
-    },
+    AddContact { npub: String, name: String },
     /// Lister les contacts
     Contacts,
     /// Envoyer un message
-    Send {
-        contact: String,
-        message: String,
-    },
+    Send { contact: String, message: String },
     /// Synchroniser les messages
     Sync,
     /// Restaurer une identité depuis une seed phrase
-    Restore {
-        phrase: String,
-    },
+    Restore { phrase: String },
 }
 
 #[tokio::main]
@@ -74,7 +66,10 @@ async fn cmd_init() {
     io::stdout().flush().ok();
     let mut input = String::new();
     if io::stdin().read_line(&mut input).is_ok()
-        && matches!(input.trim().to_lowercase().as_str(), "oui" | "o" | "y" | "yes")
+        && matches!(
+            input.trim().to_lowercase().as_str(),
+            "oui" | "o" | "y" | "yes"
+        )
     {
         println!();
         println!("SEED PHRASE (notez ces 12 mots sur papier, pas de fichier numérique) :");

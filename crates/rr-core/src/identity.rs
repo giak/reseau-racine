@@ -132,10 +132,6 @@ impl IdentityManager {
             use std::os::unix::fs::PermissionsExt;
             std::fs::set_permissions(&key_path, std::fs::Permissions::from_mode(0o600))?;
         }
-        #[cfg(windows)]
-        {
-            std::fs::set_permissions(&key_path, std::fs::Permissions::from_mode(0o600))?;
-        }
         Ok(())
     }
 }

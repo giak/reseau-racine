@@ -14,7 +14,10 @@ impl NostrTransport {
         Ok(Self { client })
     }
 
-    pub async fn with_keys(relay_url: &str, keys: Keys) -> Result<Self, Box<dyn std::error::Error>> {
+    pub async fn with_keys(
+        relay_url: &str,
+        keys: Keys,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
         let client = Client::new(keys);
         client.add_relay(relay_url).await?;
         client.connect().await;
