@@ -2,12 +2,14 @@
 
 ## Reporting a Vulnerability
 
-Ouvrir une issue GitHub avec le label `security`. Ne pas envoyer d'email — le projet est open source, les issues sont publiques.
+Utiliser le bouton **"Report a vulnerability"** sur GitHub (Security → Advisories → New advisory). Le rapport est privé, seul les mainteneurs le voient.
+
+Ne pas ouvrir d'issue publique pour une vulnérabilité.
 
 ## Scope
 
-- Chiffrement NIP-44 V2 (RR-core)
-- Stockage des clés (fichier local, permissions 0600)
+- Chiffrement NIP-44 V2 (rr-core)
+- Stockage des clés (permissions 0600)
 - Messages NIP-17 (gift wrap)
 
 ## Out of scope
