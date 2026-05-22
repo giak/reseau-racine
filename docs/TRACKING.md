@@ -58,6 +58,15 @@
 | **cargo auditable** | ✅ build-cli | metadata dépendances embarquée dans binaire |
 | **Ruleset 8 checks** | ✅ | `fuzz` + `udeps` ajoutés |
 
+### Phase 2 Sécurité (PR #5)
+
+| Élément | Status | Détail |
+|---------|--------|--------|
+| **cargo-llvm-cov** | ✅ CI | couverture de code avec rapport LCOV |
+| **cargo-mutants** | ✅ CI | test de mutation pour détecter le code sous-testé |
+| **auditable2cdx** | ✅ CI | génération de SBOM CycloneDX depuis le binaire signé |
+| **Travaux CI parallèles** | ✅ | coverage et mutants s'exécutent en parallèle avec les travaux existants |
+
 #### Erreurs CI rencontrées
 
 | Problème | Cause | Solution |

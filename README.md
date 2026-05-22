@@ -152,6 +152,11 @@ crates/
 # Vérifications complètes
 ./scripts/dev.sh cargo clippy --workspace --exclude rr-tauri
 ./scripts/dev.sh cargo fmt --all --check
+
+# Vérifications de sécurité (Phase 2)
+./scripts/dev.sh cargo llvm-cov --workspace --exclude rr-tauri --lcov --output-path coverage/lcov.info
+./scripts/dev.sh cargo install cargo-mutants --locked && ./scripts/dev.sh cargo mutants --workspace --exclude rr-tauri
+./scripts/dev.sh cargo install auditable2cdx --locked && ./scripts/dev.sh cargo auditable build --package rr-cli --release --locked && ./scripts/dev.sh auditable2cdx target/release/rr > sbom-cyclonedx.json
 ```
 
 ### Services Docker
