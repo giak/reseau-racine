@@ -62,8 +62,8 @@
 ### Ce que le POC fait
 
 1. **Génère une identité** — 1 clic → paire de clés secp256k1 (nsec/npub Nostr)
-2. **Envoie un message E2E** — Alice publie un message privé via NIP-17 (NIP-44 + NIP-59 gift wrap) sur un relais Nostr
-3. **Reçoit et déchiffre** — Bob reçoit le gift wrap, l'ouvre, vérifie la signature, lit le message
+2. **Chiffre un message E2E** — Alice chiffre avec NIP-44 V2 (ChaCha20-Poly1305), enveloppe avec NIP-59 gift wrap, publie sur un relais Nostr
+3. **Reçoit et déchiffre** — Bob reçoit le gift wrap via subscription, unwrap, déchiffre NIP-44, vérifie la signature secp256k1
 4. **Affiche le résultat** — "Message reçu de Alice : [contenu]"
 
 ### Ce que le POC ne fait PAS
@@ -75,7 +75,7 @@
 - Pas de cache, pas de P2P, pas de IPFS
 - Pas de détection de dégradation
 - Pas de groupes, pas de canaux
-- **Pas de forward secrecy** (limitation NIP-44 — voir § Limitations)
+- **Pas de post-quantum** (limitation secp256k1 — voir § Limitations)
 
 **Un seul transport** : internet via Nostr. Le "multi-transport" viendra après.
 
@@ -129,7 +129,7 @@ $ rr send bob "Salut, ça marche"
                                       → Unwrapped: message de alice
                                       → "Salut, ça marche"
                                       ✓ Signature vérifiée (secp256k1)
-                                      ✓ Déchiffré (ChaCha20-Poly1305)
+                                      ✓ Déchiffré (NIP-44 ChaCha20-Poly1305)
 ```
 
 ---
@@ -196,8 +196,8 @@ Le message passe par 3 couches :
 | **Confidentialité du contenu** | ✅ Oui (ChaCha20-Poly1305 AEAD) | Le contenu est sécurisé |
 | **Authentification de l'expéditeur** | ✅ Oui (signature secp256k1 dans le seal) | On peut vérifier qui a envoyé |
 | **Intégrité du message** | ✅ Oui (MAC Poly1305) | Le message n'est pas modifiable |
-| **Forward secrecy** | ❌ **NON** | Si une clé privée est saisie, **TOUS** les messages passés sont lisibles |
-| **Post-compromise security** | ❌ **NON** | Si une clé est compromise, les messages futurs restent lisibles |
+| **Forward secrecy** | ❌ **NON** (Phase 0) | NIP-44 seul ne fournit pas. Prérequis conditionnel en Phase 1+ (voir spec architecture §13.7). |
+| **Post-compromise security** | ❌ **NON** (Phase 0) | Idem. |
 | **Déni plausible** | ❌ **NON** | On peut prouver qu'Alice a envoyé le message (signature dans le seal) |
 | **Protection post-quantique** | ❌ **NON** | Un ordinateur quantique pourrait déchiffrer |
 | **Anonymat IP** | ❌ **NON** | Le relais voit l'IP d'Alice et de Bob |
@@ -216,19 +216,27 @@ L'audit officiel de NIP-44 par Cure53 a trouvé :
 
 ### Conclusion honnête
 
-**NIP-44 est suffisant pour le POC** mais **insuffisant pour un usage haute sécurité**. Le spec NIP-44 lui-même dit :
+**Le POC utilise NIP-44 + NIP-17 + NIP-59, stack audité par Cure53.** Pas de forward secrecy — décision consciente (voir spec architecture §13.7). L'architecture de chiffrement est abstraite derrière un trait Rust, permettant d'ajouter Double Ratchet en Phase 1+ sans changer le transport ni le format événement.
 
-> *"For high-risk situations, users should chat in specialized E2EE messaging software and limit use of nostr to exchanging contacts."*
-
-Pour le produit final, il faudra ajouter une couche de **Double Ratchet** (comme Signal) au-dessus de NIP-44 pour obtenir la forward secrecy.
+Ce qui reste non couvert :
+| Propriété | Statut |
+|-----------|--------|
+| **Forward secrecy** | ❌ Phase 0. Conditionnel Phase 1+ (§13.7). |
+| **Post-compromise** | ❌ Phase 0. Conditionnel Phase 1+. |
+| **Post-quantum** | ❌ secp256k1 vulnérable à Shor. NIP-44 v3 en discussion. |
+| **Anonymat IP** | ❌ le relais voit l'IP. Reticulum résoudra ça en Phase 3. |
+| **Déni plausible** | ❌ Phase 0 (seal signé par clé réelle d'Alice). ✅ Phase 1+ DR (seal signé par clé éphémère, rumor non signé). |
+| **Métadonnées** | ⚠️ NIP-59 gift wrap cache qui parle à qui, mais pas le timing.
 
 ---
 
 ## Critère de succès
 
-**Un seul critère** : Alice et Bob, sur deux machines différentes, échangent un message chiffré E2E via NIP-17 (gift wrap + ChaCha20-Poly1305) sur un relais Nostr public, sans aucun serveur intermédiaire à configurer.
+**Un seul critère** : Alice et Bob, sur deux machines différentes, échangent un message chiffré E2E via NIP-17 (NIP-44 + NIP-59 gift wrap + ChaCha20-Poly1305) sur un relais Nostr public, sans aucun serveur intermédiaire à configurer.
 
-Si ça marche → le concept est validé. On itère.
+**Vérification** : le relais ne peut pas lire le contenu (gift wrap + NIP-44), seule Bob peut déchiffrer, la signature secp256k1 confirme l'expéditeur.
+
+Si ça marche → le concept est validé sur un socle stable et audité. La forward secrecy sera ajoutée en Phase 1+ si les conditions sont remplies (§13.7).
 Si ça ne marche pas → on corrige avant de construire quoi que ce soit d'autre.
 
 ---
@@ -239,11 +247,12 @@ Si ça ne marche pas → on corrige avant de construire quoi que ce soit d'autre
 |-------|-------|--------|
 | Setup projet Rust + crate `nostr` | 1h | Cargo init, deps, tokio |
 | Génération de clés secp256k1 | 1h | nsec/npub, storage JSON |
-| Envoi message (NIP-17 publish) | 3h | Crate `nostr` send_private_msg + WebSocket |
-| Réception message (unwrap gift wrap) | 3h | WebSocket subscription + unwrap_gift_wrap |
+| Message NIP-17 (NIP-44 + NIP-59) | 3h | Encrypt, gift wrap, publish |
+| Réception message (unwrap + decrypt) | 2h | Subscription, unwrap, NIP-44 decrypt |
 | CLI ergonomique | 2h | `init`, `add-contact`, `send`, `sync` |
 | Test end-to-end (2 machines) | 2h | Validation |
-| **Total** | **~12h** | **1-2 jours à temps plein** |
+| Abstraction trait | 2h | `EncryptionProvider` trait + `Nip44Provider` impl (prépare migration DR future) |
+| **Total** | **~13h** | **2 jours à temps plein** |
 
 ---
 
@@ -251,12 +260,13 @@ Si ça ne marche pas → on corrige avant de construire quoi que ce soit d'autre
 
 Une fois le POC validé, on ajoute dans l'ordre :
 
-1. **Groupes** (clé de groupe X25519, cellules de 3)
-2. **Forward secrecy** (Double Ratchet au-dessus de NIP-44)
+1. **Groupes & Cellules** (NIP-44 + clé de groupe X25519, cellules de 3)
+2. **Double Ratchet** (conditionnel : audit ou merge rust-nostr) — forward secrecy + post-compromise + sender-keys
 3. **Auto-destruction** (TTL via NIP-40)
-4. **Reticulum WiFi** (second transport, même message chiffré)
-5. **Détection de dégradation** (bascule auto internet → Reticulum)
-6. **Client Tauri** (UI graphique)
+4. **Client Tauri** (UI graphique)
+5. **Reticulum WiFi** (second transport, même message chiffré, via leviculum Rust)
+6. **Détection de dégradation** (bascule auto internet → Reticulum)
 7. **Nœud relais** (Pi 5 + cache + IPFS)
+8. **Publication** (PeerTube + Owncast)
 
-Chaque étape est un EPIC séparé. On ne construit pas tout en même temps.
+Chaque étape est un EPIC séparé. On ne construit pas tout en même temps. Forward secrecy n'est pas dans le POC — décision consciente. L'architecture permet de l'ajouter plus tard sans changer le transport ni l'identité.

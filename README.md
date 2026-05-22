@@ -2,7 +2,7 @@
 
 > **Un réseau de communication souverain, résilient, et sécurisé.**
 
-RéseauRacine est un réseau où chaque utilisateur possède son propre nœud. L'identité est une clé cryptographique portable qui fonctionne sur tous les transports simultanément : internet (Matrix/Nostr), Reticulum (WiFi/Ethernet/LoRa), et Meshtastic (LoRa texte seul). Le message est chiffré avec la clé du destinataire, quel que soit le transport.
+RéseauRacine est un réseau où chaque utilisateur possède son propre nœud. L'identité est une clé cryptographique portable qui fonctionne sur tous les transports simultanément : internet fixe (DSL/fibre) ou mobile (4G/5G) via Nostr, Reticulum (WiFi/Ethernet/LoRa), et Meshtastic (LoRa texte seul). Le message est chiffré avec la clé du destinataire, quel que soit le transport.
 
 Quand un transport tombe, le message en prend un autre compatible. La dégradation est automatique et transparente.
 
@@ -22,8 +22,8 @@ Surveillance active + pression juridique (Viginum, réquisitions, infiltration).
 5 couches :
 
 ```
-Couche 0 — Identité (clé cryptographique Nostr/PGP)
-Couche 1 — Messagerie E2E (X25519 + Ed25519)
+Couche 0 — Identité (clé cryptographique secp256k1 Nostr)
+Couche 1 — Messagerie E2E (NIP-44 + NIP-17, forward secrecy Phase 1+ conditionnel)
 Couche 2 — Transports (Internet / Reticulum / Meshtastic)
 Couche 3 — Nœud local (Consommateur / Relais / Créateur)
 Couche 4 — Gouvernance (Cellules → Essaims → Collège → RIC)
@@ -41,7 +41,7 @@ Couche 4 — Gouvernance (Cellules → Essaims → Collège → RIC)
 
 | Mode | Transport | Contenu disponible |
 |------|-----------|-------------------|
-| **Normal** | Internet | Tout (articles, vidéos, streams, podcasts, messagerie) |
+| **Normal** | Internet (fixe + 4G/5G) | Tout (articles, vidéos, streams, podcasts, messagerie) |
 | **Dégradé** | Reticulum WiFi/Ethernet | Articles, cache local, messagerie |
 | **Critique** | Reticulum LoRa | Texte court, messagerie |
 | **Extrême** | Meshtastic | Texte seul, messagerie |
@@ -50,23 +50,23 @@ Couche 4 — Gouvernance (Cellules → Essaims → Collège → RIC)
 
 | Composant | Technologie |
 |-----------|------------|
-| Identité | Nostr (Ed25519) + X25519 |
-| Messagerie | Client custom (libsodium) |
-| Transport internet | Nostr + Matrix |
-| Transport local | Reticulum (WiFi/Ethernet/LoRa) |
+| Identité | Nostr (secp256k1) + X25519 |
+| Messagerie | NIP-44 + NIP-17 (ChaCha20-Poly1305, gift wrap). Double Ratchet Phase 1+ conditionnel |
+| Transport internet (fixe + 4G/5G) | Nostr + Matrix |
+| Transport local | Reticulum (WiFi/Ethernet/LoRa) — via **leviculum** (Rust natif) |
 | Transport off-grid | Meshtastic (LoRa texte seul) |
 | Vidéos | PeerTube + WebTorrent |
 | Streams | Owncast + WebTorrent |
 | Articles | Nostr + IPFS |
 | Podcasts | RSS + IPFS |
-| Client | Tauri + React (UI) + Rust (core) |
+| Client | Tauri + React + TanStack Query (UI) + Rust (core) |
 
 ## Documentation
 
 | Document | Description |
 |----------|-------------|
 | [Architecture spec](docs/superpowers/specs/2026-05-21-reseau-racine-architecture-design.md) | Spec complète — 5 couches, 3 nœuds, routage, messagerie, publication, gouvernance, faisabilité, roadmap |
-| [EPIC POC](docs/superpowers/specs/2026-05-21-poc-premier-message-chiffr-epic.md) | POC fil rouge — "Premier Message Chiffré" (16h, CLI Rust + Nostr) |
+| [EPIC POC](docs/superpowers/specs/2026-05-21-poc-premier-message-chiffr-epic.md) | POC fil rouge — "Premier Message Chiffré" (15h, CLI Rust + Nostr + NIP-44 + NIP-17) |
 | [Vision Dashboard](VISION_DASHBOARD.md) | Dashboard vision — architecture, stack, coûts, risques, métriques |
 | [Brainstorm](brainstorm/) | Notes de brainstorm — architecture, synthèse Substack, questions ouvertes, étude technologique |
 
@@ -79,7 +79,7 @@ Couche 4 — Gouvernance (Cellules → Essaims → Collège → RIC)
 
 | Phase | Durée | Objectif | Budget |
 |-------|-------|----------|--------|
-| **1 — MVP Coordination** | 0-3 mois | Messagerie E2E sur internet, cellules de 3 | 280 € |
+| **1 — MVP Coordination** | 0-3 mois | Messagerie E2E (NIP-44) sur internet, cellules de 3 | 280 € |
 | **2 — Nœuds Relais** | 3-6 mois | Pi 5 + Reticulum + cache, dégradation auto | 1 500-2 800 € |
 | **3 — Publication** | 6-12 mois | PeerTube + Owncast + RSS + IPFS | 1 200-2 400 € |
 | **4 — Résilience off-grid** | 12-18 mois | Reticulum LoRa + Meshtastic | 800-2 400 €/an |

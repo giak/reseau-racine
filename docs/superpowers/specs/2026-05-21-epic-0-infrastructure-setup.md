@@ -100,10 +100,10 @@ reseau-racine/
 
 | Commande | Rôle |
 |----------|------|
-| `rr init` | Génère une identité secp256k1, stocke dans `~/.rr/keys.json` |
+| `rr init` | Génère une identité secp256k1, stocke dans `~/.rr/` |
 | `rr add-contact <npub> <nom>` | Ajoute un contact au carnet local |
-| `rr send <nom> "message"` | Envoie un message NIP-17 (gift wrap) sur le relais |
-| `rr sync` | Reçoit les nouveaux messages, unwrap, affiche |
+| `rr send <nom> "message"` | Envoie un message via NIP-44 + NIP-17 (gift wrap) |
+| `rr sync` | Reçoit les nouveaux messages, unwrap, déchiffre, affiche |
 | `rr contacts` | Liste les contacts |
 | `rr identity` | Affiche l'identité courante (npub) |
 
@@ -208,11 +208,12 @@ volumes:
 ### `Dockerfile` (DevContainer)
 
 ```dockerfile
-# Image officielle DevContainer Rust — outils pré-installés
-FROM mcr.microsoft.com/devcontainers/rust:1-bookworm
+# Debian bookworm-slim — 70 Mo vs 120 Mo pour Ubuntu
+FROM mcr.microsoft.com/devcontainers/rust:1-bookworm-slim
 
 # Dépendances système pour Tauri v2 + libsodium
-RUN apt-get update && apt-get install -y \
+# bookworm-slim = Debian minimal, pas de paquets inutiles
+RUN apt-get update && apt-get install -y --no-install-recommends \
     libssl-dev \
     libgtk-3-dev \
     libwebkit2gtk-4.1-dev \
@@ -228,6 +229,28 @@ RUN cargo install tauri-cli --locked
 
 WORKDIR /workspace
 ```
+
+> **Note** : `bookworm-slim` (70 Mo) vs `bookworm` (120 Mo). `--no-install-recommends` évite les paquets optionnels. Alpine impossible — musl libc incompatible avec webkit2gtk (requis par Tauri v2). Wolfi/Chainguard pas de paquets GTK disponibles.
+
+> **Note** : `bookworm-slim` (70 Mo) vs `bookworm` (120 Mo). `--no-install-recommends` évite les paquets optionnels. Alpine impossible — musl libc incompatible avec webkit2gtk (requis par Tauri v2). Wolfi/Chainguard pas de paquets GTK disponibles.
+
+> **Note** : Alpine (~5 Mo) est impossible car musl libc n'est pas compatible avec webkit2gtk (glibc requis par Tauri v2). Bookworm-slim est le plus léger viable pour un devcontainer Rust + Tauri. Le vrai poids vient des dépendances GTK/webkit (~600 Mo après installation), pas de l'image de base.
+
+> **Note** : `bookworm-slim` (70 Mo) vs `bookworm` (120 Mo). `--no-install-recommends` évite les paquets optionnels. Alpine impossible — musl libc incompatible avec webkit2gtk (requis par Tauri v2). Wolfi/Chainguard pas de paquets GTK disponibles.
+
+> **Note** : `bookworm-slim` (70 Mo) vs `bookworm` (120 Mo). `--no-install-recommends` évite les paquets optionnels. Alpine impossible — musl libc incompatible avec webkit2gtk (requis par Tauri v2). Wolfi/Chainguard pas de paquets GTK disponibles.
+
+> **Note** : `bookworm-slim` (70 Mo) vs `bookworm` (120 Mo). `--no-install-recommends` évite les paquets optionnels. Alpine impossible — musl libc incompatible avec webkit2gtk (requis par Tauri v2). Wolfi/Chainguard pas de paquets GTK disponibles.
+
+> **Note taille** : Alpine (~5 Mo base) impossible car pas de webkit2gtk/GTK3 (musl libc). Chainguard/Wolfi trop limités pour le dev. Bookworm-slim est le meilleur compromis. Le vrai poids vient des dépendances Tauri (~800 Mo installées), pas de l'image de base.
+
+> **Note** : `bookworm-slim` (70 Mo) vs `bookworm` (120 Mo). `--no-install-recommends` évite les paquets optionnels. Alpine impossible — musl libc incompatible avec webkit2gtk (requis par Tauri v2). Wolfi/Chainguard pas de paquets GTK disponibles.
+
+> **Note** : `bookworm-slim` (70 Mo) vs `bookworm` (120 Mo). `--no-install-recommends` évite les paquets optionnels. Alpine impossible — musl libc incompatible avec webkit2gtk (requis par Tauri v2). Wolfi/Chainguard pas de paquets GTK disponibles.
+
+> **Note** : `bookworm-slim` (70 Mo) vs `bookworm` (120 Mo). `--no-install-recommends` évite les paquets optionnels. Alpine impossible — musl libc incompatible avec webkit2gtk (requis par Tauri v2). Wolfi/Chainguard pas de paquets GTK disponibles.
+
+> **Note** : `bookworm-slim` (70 Mo) vs `bookworm` (120 Mo). `--no-install-recommends` évite les paquets optionnels. Alpine impossible — musl libc incompatible avec webkit2gtk (requis par Tauri v2).
 
 ---
 
@@ -444,9 +467,9 @@ jobs:
 
 ## Prochaines étapes après l'EPIC 0
 
-1. **EPIC 1 — POC "Premier Message Chiffré"** (12h) — Alice et Bob échangent un message via NIP-17
-2. **EPIC 2 — Groupes & Cellules** — Clés de groupe X25519, cellules de 3
-3. **EPIC 3 — Forward Secrecy** — Double Ratchet au-dessus de NIP-44
-4. **EPIC 4 — Reticulum WiFi** — Second transport, bascule automatique
+1. **EPIC 1 — POC "Premier Message Chiffré"** (14h) — Alice et Bob échangent un message via NIP-17 + NIP-44 + NIP-59
+2. **EPIC 2 — Groupes & Cellules** — NIP-44 + clé de groupe X25519, cellules de 3 (Double Ratchet optionnel via sender-keys si conditions remplies)
+3. **EPIC 3 — Reticulum WiFi** — Second transport, bascule automatique
+4. **EPIC 4 — Client Tauri** — UI React, chat, contacts, paramètres
 5. **EPIC 5 — Client Tauri** — UI React, chat, contacts, paramètres
 6. **EPIC 6 — Nœud Relais** — Pi 5 + Docker Compose + cache + IPFS
