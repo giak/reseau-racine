@@ -1,9 +1,8 @@
 {
-  "name": "RéseauRacine",
-  "image": "mcr.microsoft.com/devcontainers/rust:latest",
-  "features": {
-    "ghcr.io/devcontainers/features/rust:1": {}
-  },
+  "name": "RéseauRacine Dev",
+  "dockerComposeFile": ["compose.yaml"],
+  "service": "dev",
+  "workspaceFolder": "/workspace",
   "customizations": {
     "vscode": {
       "extensions": [
@@ -13,8 +12,14 @@
       ]
     }
   },
-  "postCreateCommand": "cargo check --workspace",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "lts"
+    }
+  },
+  "postCreateCommand": "cargo check --workspace --exclude rr-tauri",
   "mounts": [
     "source=${env:HOME}${env:USERPROFILE}/.rr,target=/home/vscode/.rr,type=bind,consistency=cached"
-  ]
+  ],
+  "remoteUser": "vscode"
 }

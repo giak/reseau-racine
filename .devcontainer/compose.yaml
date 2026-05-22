@@ -1,0 +1,31 @@
+services:
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ..:/workspace:cached
+      - rr-home:/home/vscode
+    command: sleep infinity
+    depends_on:
+      nostr-relay:
+        condition: service_healthy
+    environment:
+      - RUST_LOG=info
+
+  nostr-relay:
+    image: scsibug/nostr-rs-relay:latest
+    ports:
+      - "8080:8080"
+    volumes:
+      - ../docker/nostr-relay/config.toml:/app/config.toml:ro
+      - nostr-data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  rr-home:
+  nostr-data:
