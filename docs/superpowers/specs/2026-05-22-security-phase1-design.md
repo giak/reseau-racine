@@ -79,6 +79,7 @@ Ajouter `fuzz` et `udeps` aux required status checks. `build-cli` déjà présen
 ## Non inclus (Phase 2+)
 
 - Coverage (tarpaulin/llvm-cov) : utile mais pas prioritaire vu 29 tests déjà passants
-- SBOM cyclonedx : pertinent au moment du release
+- SBOM cyclonedx : sera trivial via `auditable2cdx` une fois cargo-auditable en place
 - Miri : pas de unsafe à checker
 - OSS-Fuzz : maintenance lourde, prématuré en pre-1.0
+- AFL++ / Honggfuzz : corpus compatible avec libFuzzer, pourra compléter en Phase 2
