@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+DIR="$(dirname "$0")"
+
+tty_args=""
+if [ -t 0 ]; then
+  tty_args="--tty"
+fi
+
+exec "$DIR/dev.sh" ${tty_args} cargo "$@"
