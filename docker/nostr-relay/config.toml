@@ -13,6 +13,6 @@ remote_ip_header = "x-forwarded-for"
 messages_per_sec = 100
 blob_size_limit = 100000
 event_size_limit = 100000
-max_ filters = 50
+max_filters = 50
 max_ subscriptions = 50
 max_events_per_connection = 10000

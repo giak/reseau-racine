@@ -3,6 +3,8 @@ set -euo pipefail
 
 echo "=== Building RéseauRacine ==="
 
-cargo build --workspace "$@"
+scripts_dir="$(dirname "$0")"
+
+$scripts_dir/dev.sh cargo build --workspace --exclude rr-tauri "$@"
 
 echo "✓ Build complete"

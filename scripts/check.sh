@@ -3,16 +3,18 @@ set -euo pipefail
 
 echo "=== Checking RéseauRacine ==="
 
+scripts_dir="$(dirname "$0")"
+
 echo "→ cargo check"
-cargo check --workspace
+$scripts_dir/dev.sh cargo check --workspace --exclude rr-tauri
 
 echo ""
 echo "→ cargo clippy"
-cargo clippy --workspace
+$scripts_dir/dev.sh cargo clippy --workspace --exclude rr-tauri
 
 echo ""
 echo "→ cargo test"
-cargo test --workspace
+$scripts_dir/dev.sh cargo test --workspace --exclude rr-tauri
 
 echo ""
 echo "✓ All checks passed"

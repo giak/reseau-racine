@@ -21,7 +21,7 @@ services:
       - ../docker/nostr-relay/config.toml:/app/config.toml:ro
       - nostr-data:/app/data
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080"]
       interval: 10s
       timeout: 5s
       retries: 3

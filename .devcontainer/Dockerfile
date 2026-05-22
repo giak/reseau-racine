@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/devcontainers/rust:1-bookworm-slim
+FROM mcr.microsoft.com/devcontainers/rust:1-bookworm
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libssl-dev \

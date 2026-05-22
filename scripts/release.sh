@@ -3,8 +3,10 @@ set -euo pipefail
 
 echo "=== Release build ==="
 
-cargo build --release
+scripts_dir="$(dirname "$0")"
+
+$scripts_dir/dev.sh cargo build --release --package rr-cli
 
 echo ""
 echo "Binary: target/release/rr"
-echo "Size: $(du -h target/release/rr | cut -f1)"
+$scripts_dir/dev.sh sh -c "du -h target/release/rr | cut -f1"

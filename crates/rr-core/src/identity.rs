@@ -184,4 +184,101 @@ mod tests {
 
         let _ = std::fs::remove_dir_all(&dir);
     }
+
+    #[test]
+    fn test_unique_keys() {
+        let a = Identity::new();
+        let b = Identity::new();
+        assert_ne!(a.secret_key_bech32(), b.secret_key_bech32());
+    }
+
+    #[test]
+    fn test_from_seed_phrase_with_passphrase() {
+        let phrase = Identity::generate_seed_phrase().unwrap();
+        let without = Identity::from_seed_phrase(&phrase, "").unwrap();
+        let with = Identity::from_seed_phrase(&phrase, "secret").unwrap();
+        assert_ne!(without.public_key_bech32(), with.public_key_bech32());
+    }
+
+    #[test]
+    fn test_seed_phrase_deterministic() {
+        let phrase = Identity::generate_seed_phrase().unwrap();
+        let a = Identity::from_seed_phrase(&phrase, "").unwrap();
+        let b = Identity::from_seed_phrase(&phrase, "").unwrap();
+        assert_eq!(a.public_key_bech32(), b.public_key_bech32());
+    }
+
+    #[test]
+    fn test_invalid_seed_phrase() {
+        let result = Identity::from_seed_phrase("not a valid bip39 phrase", "");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_invalid_nsec() {
+        let result = Identity::from_nsec("nsec1invalid");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_public_key_format() {
+        let identity = Identity::new();
+        let npub = identity.public_key_bech32();
+        assert!(npub.starts_with("npub1"), "npub should start with npub1, got: {}", npub);
+        assert_eq!(npub.len(), 63);
+    }
+
+    #[test]
+    fn test_secret_key_format() {
+        let identity = Identity::new();
+        let nsec = identity.secret_key_bech32();
+        assert!(nsec.starts_with("nsec1"), "nsec should start with nsec1, got: {}", nsec);
+    }
+
+    #[test]
+    fn test_load_missing_file() {
+        let dir = std::env::temp_dir().join(format!("rr-test-missing-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let manager = IdentityManager::new(&dir);
+        let result = manager.load();
+        assert!(result.is_err());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_load_or_create_creates() {
+        let dir = std::env::temp_dir().join(format!("rr-test-create-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let manager = IdentityManager::new(&dir);
+        let identity = manager.load_or_create().unwrap();
+        assert!(!identity.public_key_bech32().is_empty());
+        assert!(dir.join("keys.json").exists());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_load_or_create_loads_existing() {
+        let dir = std::env::temp_dir().join(format!("rr-test-load-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let original = Identity::new();
+        let manager = IdentityManager::new(&dir);
+        manager.save(&original).unwrap();
+        let loaded = manager.load_or_create().unwrap();
+        assert_eq!(original.public_key_bech32(), loaded.public_key_bech32());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_debug_hides_secret_key() {
+        let identity = Identity::new();
+        let debug = format!("{:?}", identity);
+        assert!(debug.contains("npub"));
+        assert!(!debug.contains("nsec"));
+    }
+
+    #[test]
+    fn test_default_identity() {
+        let identity = Identity::default();
+        assert!(!identity.public_key_bech32().is_empty());
+    }
 }

@@ -97,8 +97,20 @@ async fn cmd_add_contact(npub: &str, name: &str) {
     let contacts_dir = rr_core::identity::IdentityManager::default_data_dir();
     let path = contacts_dir.join("contacts.json");
     let mut contacts: Vec<serde_json::Value> = if path.exists() {
-        let content = std::fs::read_to_string(&path).unwrap_or_default();
-        serde_json::from_str(&content).unwrap_or_default()
+        let content = match std::fs::read_to_string(&path) {
+            Ok(c) => c,
+            Err(e) => {
+                eprintln!("Erreur lecture contacts.json: {}", e);
+                return;
+            }
+        };
+        match serde_json::from_str(&content) {
+            Ok(c) => c,
+            Err(e) => {
+                eprintln!("Erreur: contacts.json corrompu: {}", e);
+                return;
+            }
+        }
     } else {
         vec![]
     };
@@ -123,8 +135,20 @@ async fn cmd_contacts() {
     let contacts_dir = rr_core::identity::IdentityManager::default_data_dir();
     let path = contacts_dir.join("contacts.json");
     if path.exists() {
-        let content = std::fs::read_to_string(&path).unwrap_or_default();
-        let contacts: Vec<serde_json::Value> = serde_json::from_str(&content).unwrap_or_default();
+        let content = match std::fs::read_to_string(&path) {
+            Ok(c) => c,
+            Err(e) => {
+                eprintln!("Erreur lecture contacts.json: {}", e);
+                return;
+            }
+        };
+        let contacts: Vec<serde_json::Value> = match serde_json::from_str(&content) {
+            Ok(c) => c,
+            Err(e) => {
+                eprintln!("Erreur: contacts.json corrompu: {}", e);
+                return;
+            }
+        };
         if contacts.is_empty() {
             println!("Aucun contact.");
             return;
