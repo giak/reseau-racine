@@ -17,4 +17,4 @@ Une phrase sur ce que fait cette PR.
 - [ ] `cargo clippy --workspace --exclude rr-tauri -- -D warnings` passe
 - [ ] `cargo test --workspace --exclude rr-tauri --locked` passe
 - [ ] Ma branche est à jour avec `main`
-- [ ] La CI est verte (5 checks)
+- [ ] La CI est verte (6 checks : lint, test, audit, check-cross ⨯2, build-cli)
