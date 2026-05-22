@@ -42,6 +42,15 @@ Pas de push direct sur `main`. Jamais de merge commit — `squash merge` seuleme
 
 **CI doit être verte avant merge.** Si un check échoue, on fixe, on pousse, on attend la re-vérification. Un merge rouge n'existe pas. Les 5 checks : lint, test, audit, check-cross, build-cli.
 
+### Pre-commit Hook (automatique)
+
+Un pre-commit hook est installé automatiquement via `rhusky` (dans `crates/rr-core/build.rs`). Lance 3 checks avant chaque `git commit` :
+1. `cargo fmt --all --check`
+2. `cargo clippy --workspace --exclude rr-tauri -- -D warnings`
+3. `cargo test --workspace --exclude rr-tauri --locked`
+
+Si un check échoue → commit bloqué. Le hook est versionné dans `.githooks/pre-commit` et s'installe automatiquement au premier `cargo build`/`cargo test`. Pas d'action manuelle.
+
 ### Commands
 ```bash
 # Nouvelle branche
