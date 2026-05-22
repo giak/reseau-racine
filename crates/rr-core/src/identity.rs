@@ -224,7 +224,11 @@ mod tests {
     fn test_public_key_format() {
         let identity = Identity::new();
         let npub = identity.public_key_bech32();
-        assert!(npub.starts_with("npub1"), "npub should start with npub1, got: {}", npub);
+        assert!(
+            npub.starts_with("npub1"),
+            "npub should start with npub1, got: {}",
+            npub
+        );
         assert_eq!(npub.len(), 63);
     }
 
@@ -232,7 +236,11 @@ mod tests {
     fn test_secret_key_format() {
         let identity = Identity::new();
         let nsec = identity.secret_key_bech32();
-        assert!(nsec.starts_with("nsec1"), "nsec should start with nsec1, got: {}", nsec);
+        assert!(
+            nsec.starts_with("nsec1"),
+            "nsec should start with nsec1, got: {}",
+            nsec
+        );
     }
 
     #[test]
