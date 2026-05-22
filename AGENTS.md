@@ -32,7 +32,14 @@ Prouve par le code/l'output/le test qui passe. Rapport sténographique : fait, t
 
 ## Git & Branch Strategy
 
-`main` est protégée : PR obligatoire, 5 status checks (lint, test, audit, check-cross, build-cli), force push bloqué.
+`main` est protégée par 2 Repository Rulesets (GitHub 2026) :
+
+| Ruleset | Règles | Bypass |
+|---------|--------|--------|
+| **Check Main** | PR + 1 review + 6 status checks | User `giak` peut bypass |
+| **Protect Main** | Force push bloqué, deletion bloquée | **Aucun** (même admin) |
+
+6 status checks requis : `lint`, `test`, `audit`, `check-cross (macos-latest)`, `check-cross (windows-latest)`, `build-cli`.
 
 ```
 feature/<scope> → PR → CI green → squash merge → main
@@ -40,7 +47,7 @@ feature/<scope> → PR → CI green → squash merge → main
 
 Pas de push direct sur `main`. Jamais de merge commit — `squash merge` seulement.
 
-**CI doit être verte avant merge.** Si un check échoue, on fixe, on pousse, on attend la re-vérification. Un merge rouge n'existe pas. Les 5 checks : lint, test, audit, check-cross, build-cli.
+**CI doit être verte avant merge.** Si un check échoue, on fixe, on pousse, on attend la re-vérification.
 
 ### Pre-commit Hook (automatique)
 
@@ -65,6 +72,9 @@ gh pr create --fill
 
 # After review + CI green
 gh pr merge --squash
+
+# Solo dev fast-track (bypass review, bypassable par `giak` dans Ruleset)
+gh pr merge --squash --admin
 ```
 
 ## Superpowers Workflow

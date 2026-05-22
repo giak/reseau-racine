@@ -33,6 +33,11 @@
 | README pédagogique | ✅ |
 | AGENTS.md | ✅ |
 | Security audit | ✅ |
+| Repository Rulesets (Check Main + Protect Main) | ✅ |
+| CI job names alignés avec noms des status checks | ✅ |
+| Pre-commit hook `.githooks/pre-commit` (pas de rhusky) | ✅ |
+| Makefile (build, test, fmt, lint, audit, ci, hooks) | ✅ |
+| Templates GitHub + EditorConfig + VSCode + SECURITY.md | ✅ |
 | **Tests (cargo test --workspace)** | ✅ 7/7 pass |
 | **Clippy** | ✅ 0 warnings |
 | **cargo-deny** | ✅ 4/4 OK |
