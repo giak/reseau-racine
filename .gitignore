@@ -7,13 +7,3 @@ node_modules/
 frontend/dist/
 .cargo/config*
 .cargo/credentials
-
-# Kilo agent data
-.kilo/
-
-# Build artifacts
-coverage/
-mutants.out/
-
-# Fuzz corpus (can be regenerated)
-crates/rr-core/fuzz/corpus/
