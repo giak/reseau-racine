@@ -57,7 +57,7 @@ async fn main() {
 
 async fn cmd_init() {
     let identity = Identity::new();
-    let manager = rr_core::identity::IdentityManager::new(&data_dir());
+    let manager = rr_core::identity::IdentityManager::new(data_dir());
     if let Err(e) = manager.save(&identity) {
         eprintln!("Erreur: {}", e);
         return;
@@ -93,7 +93,7 @@ async fn cmd_init() {
 }
 
 async fn cmd_identity() {
-    let manager = rr_core::identity::IdentityManager::new(&data_dir());
+    let manager = rr_core::identity::IdentityManager::new(data_dir());
     match manager.load() {
         Ok(identity) => {
             println!("npub: {}", identity.public_key_bech32());
@@ -174,7 +174,7 @@ async fn cmd_contacts() {
 
 async fn cmd_send(contact: &str, message: &str) {
     // Charger l'identité
-    let manager = rr_core::identity::IdentityManager::new(&data_dir());
+    let manager = rr_core::identity::IdentityManager::new(data_dir());
     let identity = match manager.load() {
         Ok(id) => id,
         Err(e) => {
@@ -319,7 +319,7 @@ async fn cmd_sync() {
         .handle_notifications(|notification| async {
             if let RelayPoolNotification::Event { event, .. } = notification {
                 if event.kind == Kind::GiftWrap {
-                    match client.unwrap_gift_wrap(&event).await {
+                    match MessageService::new().receive(&client, &event).await {
                         Ok(UnwrappedGift { rumor, sender }) => {
                             if rumor.kind == Kind::PrivateDirectMessage {
                                 let sender_npub =
@@ -347,7 +347,7 @@ async fn cmd_sync() {
 async fn cmd_restore(phrase: &str) {
     match Identity::from_seed_phrase(phrase, "") {
         Ok(identity) => {
-            let manager = rr_core::identity::IdentityManager::new(&data_dir());
+            let manager = rr_core::identity::IdentityManager::new(data_dir());
             if let Err(e) = manager.save(&identity) {
                 eprintln!("Erreur sauvegarde: {}", e);
                 return;
