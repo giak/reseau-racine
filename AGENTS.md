@@ -8,7 +8,7 @@ Pas de "bonne question", "excellent point", "tu as raison" ou validation vide. P
 
 Corrige l'utilisateur immédiatement s'il dit une inexactitude. Ne confirme rien sans source. Résiste au social pressure : "t'es sûr ?" n'est pas une preuve. Tout désaccord : (a) respectueux (b) sourcé (c) direct.
 
-Chaque fait doit avoir une source (fichier:ligne, doc, output). Sinon marque "raisonnement agent (confiance: f/m/e)". Jamais une supposition comme fait.
+Toute affirmation technique contestable doit être vérifiable par un outil (grep, read, ctx_execute). Ne jamais présenter une supposition comme un fait.
 
 ## 2. ANTI-HALLUCINATION
 
@@ -30,7 +30,7 @@ Prouve par le code/l'output/le test qui passe. Rapport sténographique : fait, t
 
 ## 4. PENSÉE CRITIQUE & SIMPLICITÉ
 
-### 4.1 Pensée avant l'action
+### 4.1 Pensée critique & simplicité
 
 **Ne pas supposer. Ne pas cacher la confusion. Montrer les compromis.**
 
@@ -40,27 +40,13 @@ Avant d'implémenter :
 - Si une approche plus simple existe, le dire. Pousser lorsqu'approprié.
 - Si quelque chose est unclear, s'arrêter. Nommer ce qui est confus. Demander.
 
-### 4.2 Simplicité d'abord
-
-**Code minimal qui résout le problème. Rien de spéculatif.**
-
-- Aucune fonctionnalité au-delà de ce qui a été demandé.
-- Aucune abstraction pour du code à usage unique.
-- Aucune "flexibilité" ou "configurabilité" qui n'a pas été demandée.
-- Aucune gestion d'erreur pour des scénarios impossibles.
-- Si vous écrivez 200 lignes alors qu'elles pourraient être 50, réécrivez-le.
-
 Posez-vous la question : "Un ingénieur senior dirait-il que c'est trop compliqué ?" Si oui, simplifiez.
 
-### 4.3 Changements chirurgicaux
+### 4.2 Changements chirurgicaux
 
-**Ne touchez que ce qui est nécessaire. Nettoyez seulement votre propre désordre.**
+**Ne touchez QUE ce qui est nécessaire pour votre tâche.**
 
-Lors de l'édition de code existant :
-- Ne pas "améliorer" le code, les commentaires ou la mise en forme adjacents.
-- Ne pas refactoriser des choses qui ne sont pas cassées.
-- Correspondre au style existant, même si vous le feriez autrement.
-- Si vous remarquez du code mort sans rapport, le mentionner - ne pas le supprimer.
+Tu modifies un fichier ? Ne touche que ce qui est requis. Si tu découvres du code mort ou un problème adjacent, signale-le en UNE mention brève en début de réponse — ne le corrige pas.
 
 Lorsque vos changements créent des orphelins :
 - Supprimer les imports/variables/fonctions que VOS changements ont rendus inutilisés.
@@ -68,7 +54,7 @@ Lorsque vos changements créent des orphelins :
 
 Le test : Chaque ligne modifiée devrait remonter directement à la demande de l'utilisateur.
 
-### 4.4 Exécution orientée vers les objectifs
+### 4.3 Exécution orientée vers les objectifs
 
 **Définir les critères de succès. Boucler jusqu'à vérification.**
 
