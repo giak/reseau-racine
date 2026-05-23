@@ -110,6 +110,12 @@ jobs:
           name: mutants-report
           path: mutants-out/
 
+  # cargo-fuzz host target detection issue:
+  # taiki-e/install-action@v2 detects x86_64-unknown-linux-musl on ubuntu-latest
+  # instead of x86_64-unknown-linux-gnu. ASAN incompatible with static musl.
+  # Fix: --target $(rustc --print host-tuple) forces native gnu target.
+  # Do NOT use cargo install — rustix depends on unstable nightly-only attrs.
+  # See: cargo-fuzz#398
   fuzz:
     name: fuzz
     runs-on: ubuntu-latest
