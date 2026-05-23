@@ -284,8 +284,20 @@ async fn cmd_sync() {
     // Charger les contacts pour résoudre npub → nom
     let contacts_path = data_dir.join("contacts.json");
     let contacts: Vec<serde_json::Value> = if contacts_path.exists() {
-        let content = std::fs::read_to_string(&contacts_path).unwrap_or_default();
-        serde_json::from_str(&content).unwrap_or_default()
+        let content = match std::fs::read_to_string(&contacts_path) {
+            Ok(c) => c,
+            Err(e) => {
+                eprintln!("Erreur lecture contacts.json: {}", e);
+                return;
+            }
+        };
+        match serde_json::from_str(&content) {
+            Ok(c) => c,
+            Err(e) => {
+                eprintln!("Erreur: contacts.json corrompu: {}", e);
+                return;
+            }
+        }
     } else {
         vec![]
     };
@@ -304,8 +316,10 @@ async fn cmd_sync() {
     let count = std::sync::Arc::new(std::sync::atomic::AtomicU32::new(0));
     let count_clone = count.clone();
 
-    if let Err(e) = client
-        .handle_notifications(|notification| async {
+    let timeout_duration = std::time::Duration::from_secs(5);
+    let result = tokio::time::timeout(
+        timeout_duration,
+        client.handle_notifications(|notification| async {
             if let RelayPoolNotification::Event { event, .. } = notification {
                 if event.kind == Kind::GiftWrap {
                     match client.unwrap_gift_wrap(&event).await {
@@ -327,11 +341,17 @@ async fn cmd_sync() {
                 }
             }
             Ok(false)
-        })
-        .await
-    {
-        eprintln!("Erreur notification loop: {}", e);
-        return;
+        }),
+    )
+    .await;
+
+    match result {
+        Ok(Ok(())) => {}
+        Ok(Err(e)) => {
+            eprintln!("Erreur notification loop: {}", e);
+            return;
+        }
+        Err(_elapsed) => {}
     }
 
     if count.load(std::sync::atomic::Ordering::Relaxed) == 0 {
