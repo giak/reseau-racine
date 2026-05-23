@@ -92,7 +92,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: coverage-report
-          path: coverage/lcov.info
+          path: coverage/
 
   mutants:
     name: mutants
@@ -103,7 +103,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: swatinem/rust-cache@v2
       - run: cargo install cargo-mutants --locked
-      - run: mkdir -p mutants-out && cargo mutants --workspace --exclude rr-tauri --output mutants-out || true
+      - run: cargo mutants --workspace --exclude rr-tauri || true
       - uses: actions/upload-artifact@v4
         if: always()
         with:
