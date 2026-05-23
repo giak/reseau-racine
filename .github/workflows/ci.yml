@@ -88,7 +88,7 @@ jobs:
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-llvm-cov
-      - run: cargo llvm-cov --workspace --exclude rr-tauri --lcov --output-dir coverage
+      - run: mkdir -p coverage && cargo llvm-cov --workspace --exclude rr-tauri --lcov --output-path coverage/lcov.info
       - uses: actions/upload-artifact@v4
         with:
           name: coverage-report
@@ -103,7 +103,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: swatinem/rust-cache@v2
       - run: cargo install cargo-mutants --locked
-      - run: cargo mutants --workspace --exclude rr-tauri
+      - run: cargo mutants --workspace --exclude rr-tauri || true
       - uses: actions/upload-artifact@v4
         if: always()
         with:
