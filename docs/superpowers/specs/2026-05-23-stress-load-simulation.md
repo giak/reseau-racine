@@ -8,11 +8,47 @@
 
 Comment se comporte nostr-rs-relay avec 50, 100, 500 clients simultanés ? Quels goulets (connexions WebSocket, traitement événements, DB SQLite) ? Peut-on passer à l'échelle ?
 
+## Architecture
+
+```mermaid
+flowchart TD
+    SEED["Seed stable (index)"]
+    GEN["Générer N identités<br/>déterministes"]
+    CLIENTS["Créer N clients tokio<br/>Keys + Client nostr-sdk"]
+
+    subgraph Phase_Hello["Phase Hello"]
+        HELLO["Chaque user → 1 destinataire aléatoire<br/>Évite N×M broadcast"]
+    end
+
+    subgraph Phase_Chat["Phase Chat"]
+        CHAT["Messages périodiques<br/>toutes les --interval ms"]
+    end
+
+    subgraph COLLECT["Collecte Métriques"]
+        SUCCESS["success_count / total"]
+        LATENCY["latence p50 / p95 / p99"]
+        ERRORS["errors: timeout, reject, disconnect"]
+    end
+
+    subgraph OUTPUT["Output"]
+        JSON["results/stress-*.json"]
+        TABLE["Table récap console"]
+    end
+
+    SEED --> GEN --> CLIENTS
+    CLIENTS --> Phase_Hello
+    CLIENTS --> Phase_Chat
+    Phase_Hello --> COLLECT
+    Phase_Chat --> COLLECT
+    COLLECT --> OUTPUT
+    OUTPUT --> RELAY["nostr-relay ws://172.20.0.2:8080"]
+```
+
 ## Solution
 
 Binaire séparé `crates/rr-stress/` — outil dev uniquement, pas dans le CLI principal.
 
-### Architecture
+### Files
 
 ```
 crates/rr-stress/

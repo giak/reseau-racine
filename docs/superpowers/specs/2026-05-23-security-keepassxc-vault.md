@@ -9,6 +9,40 @@
 
 Les clés Nostr sont stockées dans `~/.local/share/reseau-racine/identities/*.json` en clair. N'importe quel processus ou backup peut les lire. Inacceptable pour un usage réel.
 
+## Architecture
+
+```mermaid
+flowchart TD
+    CLI["rr send bob 'hello'"]
+    ID["IdentityManager::load()"]
+    RR_KEYSTORE{"RR_KEYSTORE ?"}
+    FILE["file (défaut)"]
+    XC["keepassxc://..." ]
+    RS["keepass-rs://..."]
+    JSON["~/.local/share/.../identities/*.json"]
+    CLI_XC["keepassxc-cli show"]
+    CLI_RS["keepass-rs crate"]
+    MASTER["Prompt master password"]
+    NSEC["nsec en mémoire"]
+    SEND["NIP-17 GiftWrap → relais"]
+    ZERO["zeroize après usage"]
+
+    CLI --> ID
+    ID --> RR_KEYSTORE
+    RR_KEYSTORE -- absent/file --> FILE
+    FILE --> JSON
+    JSON --> NSEC
+    RR_KEYSTORE -- keepassxc:// --> XC
+    XC --> CLI_XC
+    CLI_XC --> MASTER
+    MASTER --> NSEC
+    RR_KEYSTORE -- keepass-rs:// --> RS
+    RS --> CLI_RS
+    CLI_RS --> MASTER
+    NSEC --> SEND
+    SEND --> ZERO
+```
+
 ## Solution
 
 `RR_KEYSTORE` variable d'environnement configure le backend de stockage :

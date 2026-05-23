@@ -12,6 +12,37 @@ Aucune métrique sur les performances réelles :
 - Coût de connexion initiale (wait_for_connection)
 - Différence relais local vs public
 
+## Architecture
+
+```mermaid
+flowchart LR
+    subgraph Crypto_Bench["Bench Crypto (criterion)"]
+        ENC["NIP-44 encrypt 1KB"]
+        DEC["NIP-44 decrypt"]
+        SIGN["Event sign kind 1059"]
+        GW["GiftWrap full roundtrip<br/>encrypt→seal→unwrap→decrypt"]
+    end
+
+    subgraph Transport_Bench["Bench Transport (relais local)"]
+        PUB1["Publish single<br/>connect→wait→publish"]
+        PUBN["Publish batch<br/>N messages (1,10,100)"]
+        SYNC1["Sync single<br/>subscribe→unwrap"]
+        SYNCN["Sync load<br/>N messages→receive→unwrap"]
+    end
+
+    subgraph CLI["rr bench --count N"]
+        CLI_RUN["rr bench --count 10"]
+    end
+
+    CLI_RUN --> Crypto_Bench
+    CLI_RUN --> Transport_Bench
+
+    PUB1 --> RELAY["nostr-relay Docker<br/>ws://172.20.0.2:8080"]
+    PUBN --> RELAY
+    SYNC1 --> RELAY
+    SYNCN --> RELAY
+```
+
 ## Solution
 
 Criterion benchmarks dans `crates/rr-core` + sous-commande CLI `rr bench`.
