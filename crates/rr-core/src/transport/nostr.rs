@@ -12,6 +12,9 @@ impl NostrTransport {
         let client = Client::new(keys);
         client.add_relay(relay_url).await?;
         client.connect().await;
+        client
+            .wait_for_connection(std::time::Duration::from_secs(10))
+            .await;
         Ok(Self {
             client,
             relay_url: relay_url.to_string(),
@@ -25,6 +28,9 @@ impl NostrTransport {
         let client = Client::new(keys);
         client.add_relay(relay_url).await?;
         client.connect().await;
+        client
+            .wait_for_connection(std::time::Duration::from_secs(10))
+            .await;
         Ok(Self {
             client,
             relay_url: relay_url.to_string(),
