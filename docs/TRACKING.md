@@ -12,6 +12,9 @@
 ░░░░░░░░░░  EPIC 4  — Client Tauri            ⬜  —
 ░░░░░░░░░░  EPIC 5  — Forward Secrecy         ⬜  —
 ░░░░░░░░░░  EPIC 6  — Nœud relais             ⬜  —
+░░░░░░░░░░  EPIC 7  — Sécurité CLI            ⬜  —  KeePassXC vault + zeroize
+░░░░░░░░░░  EPIC 8  — Performance             ⬜  —  Benchmarks système
+░░░░░░░░░░  EPIC 9  — Simulation charge       ⬜  —  rr-stress load testing
 ```
 
 ---
@@ -68,15 +71,6 @@
 | **cargo-fuzz** | ✅ CI | 3 targets, 2min each, corpus cache |
 | **cargo auditable** | ✅ build-cli | metadata dépendances embarquée dans binaire |
 | **Ruleset 8 checks** | ✅ | `fuzz` + `udeps` ajoutés |
-
-### Phase 2 Sécurité (PR #5)
-
-| Élément | Status | Détail |
-|---------|--------|--------|
-| **cargo-llvm-cov** | ✅ CI | couverture de code avec rapport LCOV |
-| **cargo-mutants** | ✅ CI | test de mutation pour détecter le code sous-testé |
-| **auditable2cdx** | ✅ CI | génération de SBOM CycloneDX depuis le binaire signé |
-| **Travaux CI parallèles** | ✅ | coverage et mutants s'exécutent en parallèle avec les travaux existants |
 
 #### Erreurs CI rencontrées
 
@@ -192,6 +186,51 @@ RUST_LOG=debug ./scripts/dev.sh env RR_DATA_DIR=/tmp/rr-bob cargo run --package 
 | Raspberry Pi 5 + Docker | ⬜ |
 | Cache + IPFS | ⬜ |
 | Configuration WAN | ⬜ |
+
+---
+
+## EPIC 7 — Sécurité CLI ⬜
+
+Vault KeePassXC pour clés Nostr, remove storage JSON en clair.
+
+| Story | Status | Détail |
+|-------|--------|--------|
+| `RR_KEYSTORE=keepassxc://...` backend | ⬜ | Sous-processus keepassxc-cli, master password sur stdin |
+| `RR_KEYSTORE=keepass-rs://...` fallback | ⬜ | Crate `keepass` Rust, ouvre KDBX direct |
+| zeroize mémoire après usage | ⬜ | Zéroter SecretKey après NIP-44/NIP-17 |
+| Rétro-compatibilité `file` | ⬜ | RR_KEYSTORE absent → comportement actuel inchangé |
+
+**Spec :** `docs/superpowers/specs/2026-05-23-security-keepassxc-vault.md`
+
+---
+
+## EPIC 8 — Performance ⬜
+
+Benchmarks système pour mesurer latences et débit.
+
+| Story | Status | Détail |
+|-------|--------|--------|
+| Bench crypto pure (criterion) | ⬜ | NIP-44 encrypt/decrypt, event sign, full roundtrip |
+| Bench transport (relais local Docker) | ⬜ | Publish single/batch, sync single/load |
+| `rr bench` sous-commande CLI | ⬜ | Wrapper CLI pour les benchs |
+| Crypto bench en CI | ⬜ | Benchmarks déterministes en CI |
+
+**Spec :** `docs/superpowers/specs/2026-05-23-performance-benchmarking.md`
+
+---
+
+## EPIC 9 — Simulation Charge ⬜
+
+Outil de stress test pour valider le comportement sous charge.
+
+| Story | Status | Détail |
+|-------|--------|--------|
+| Binaire `rr-stress` séparé | ⬜ | Génération N identités, N clients tokio |
+| Phase Hello + Chat | ⬜ | Envois périodiques, destinataires aléatoires |
+| Métriques (success, latence p50/p95/p99, erreurs) | ⬜ | Output JSON + table recap |
+| Test 50 users sur relais local | ⬜ | Valider le goulet nostr-rs-relay |
+
+**Spec :** `docs/superpowers/specs/2026-05-23-stress-load-simulation.md`
 
 ---
 
