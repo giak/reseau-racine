@@ -1,0 +1,24 @@
+--- crates/rr-core/src/identity.rs
++++ replace Identity::secret_key_bech32 -> String with String::new()
+@@ -62,20 +62,17 @@
+     pub fn public_key_bech32(&self) -> String {
+         self.keys
+             .public_key()
+             .to_bech32()
+             .expect("valid public key always encodes to bech32")
+     }
+ 
+     pub fn secret_key_bech32(&self) -> String {
+-        self.keys
+-            .secret_key()
+-            .to_bech32()
+-            .expect("valid secret key always encodes to bech32")
++        String::new() /* ~ changed by cargo-mutants ~ */
+     }
+ }
+ 
+ impl Default for Identity {
+     fn default() -> Self {
+         Self::new()
+     }
+ }

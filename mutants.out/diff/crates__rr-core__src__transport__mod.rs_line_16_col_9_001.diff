@@ -1,0 +1,15 @@
+--- crates/rr-core/src/transport/mod.rs
++++ replace <impl TransportProvider for nostr::NostrTransport>::kind -> &'static str with "xyzzy"
+@@ -8,11 +8,11 @@
+ }
+ 
+ impl TransportProvider for nostr::NostrTransport {
+     fn client(&self) -> &Client {
+         self.client()
+     }
+ 
+     fn kind(&self) -> &'static str {
+-        "nostr"
++        "xyzzy" /* ~ changed by cargo-mutants ~ */
+     }
+ }

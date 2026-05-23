@@ -1,0 +1,1786 @@
+{
+  "outcomes": [
+    {
+      "scenario": "Baseline",
+      "summary": "Success",
+      "log_path": "log/baseline.log",
+      "diff_path": null,
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 11.275028829,
+          "process_status": "Success",
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 0.752390707,
+          "process_status": "Success",
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "crates/rr-core/src/crypto.rs:13:9: replace CryptoProvider::encrypt -> Result<String, nip44::Error> with Ok(String::new())",
+          "package": "rr-core",
+          "file": "crates/rr-core/src/crypto.rs",
+          "function": {
+            "function_name": "CryptoProvider::encrypt",
+            "return_type": "-> Result<String, nip44::Error>",
+            "span": {
+              "start": {
+                "line": 8,
+                "column": 5
+              },
+              "end": {
+                "line": 14,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 13,
+              "column": 9
+            },
+            "end": {
+              "line": 13,
+              "column": 76
+            }
+          },
+          "replacement": "Ok(String::new())",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/crates__rr-core__src__crypto.rs_line_13_col_9.log",
+      "diff_path": "diff/crates__rr-core__src__crypto.rs_line_13_col_9.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 0.551543534,
+          "process_status": "Success",
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 0.201944086,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "crates/rr-core/src/crypto.rs:13:9: replace CryptoProvider::encrypt -> Result<String, nip44::Error> with Ok(\"xyzzy\".into())",
+          "package": "rr-core",
+          "file": "crates/rr-core/src/crypto.rs",
+          "function": {
+            "function_name": "CryptoProvider::encrypt",
+            "return_type": "-> Result<String, nip44::Error>",
+            "span": {
+              "start": {
+                "line": 8,
+                "column": 5
+              },
+              "end": {
+                "line": 14,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 13,
+              "column": 9
+            },
+            "end": {
+              "line": 13,
+              "column": 76
+            }
+          },
+          "replacement": "Ok(\"xyzzy\".into())",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/crates__rr-core__src__crypto.rs_line_13_col_9_001.log",
+      "diff_path": "diff/crates__rr-core__src__crypto.rs_line_13_col_9_001.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 0.602906068,
+          "process_status": "Success",
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 0.202077872,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "crates/rr-core/src/crypto.rs:21:9: replace CryptoProvider::decrypt -> Result<String, nip44::Error> with Ok(String::new())",
+          "package": "rr-core",
+          "file": "crates/rr-core/src/crypto.rs",
+          "function": {
+            "function_name": "CryptoProvider::decrypt",
+            "return_type": "-> Result<String, nip44::Error>",
+            "span": {
+              "start": {
+                "line": 16,
+                "column": 5
+              },
+              "end": {
+                "line": 22,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 21,
+              "column": 9
+            },
+            "end": {
+              "line": 21,
+              "column": 56
+            }
+          },
+          "replacement": "Ok(String::new())",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/crates__rr-core__src__crypto.rs_line_21_col_9.log",
+      "diff_path": "diff/crates__rr-core__src__crypto.rs_line_21_col_9.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 0.551650559,
+          "process_status": "Success",
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 0.201240046,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "crates/rr-core/src/crypto.rs:21:9: replace CryptoProvider::decrypt -> Result<String, nip44::Error> with Ok(\"xyzzy\".into())",
+          "package": "rr-core",
+          "file": "crates/rr-core/src/crypto.rs",
+          "function": {
+            "function_name": "CryptoProvider::decrypt",
+            "return_type": "-> Result<String, nip44::Error>",
+            "span": {
+              "start": {
+                "line": 16,
+                "column": 5
+              },
+              "end": {
+                "line": 22,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 21,
+              "column": 9
+            },
+            "end": {
+              "line": 21,
+              "column": 56
+            }
+          },
+          "replacement": "Ok(\"xyzzy\".into())",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/crates__rr-core__src__crypto.rs_line_21_col_9_001.log",
+      "diff_path": "diff/crates__rr-core__src__crypto.rs_line_21_col_9_001.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 0.551775489,
+          "process_status": "Success",
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 0.201165613,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "crates/rr-core/src/crypto.rs:25:9: replace CryptoProvider::generate_keys -> Keys with Default::default()",
+          "package": "rr-core",
+          "file": "crates/rr-core/src/crypto.rs",
+          "function": {
+            "function_name": "CryptoProvider::generate_keys",
+            "return_type": "-> Keys",
+            "span": {
+              "start": {
+                "line": 24,
+                "column": 5
+              },
+              "end": {
+                "line": 26,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 25,
+              "column": 9
+            },
+            "end": {
+              "line": 25,
+              "column": 25
+            }
+          },
+          "replacement": "Default::default()",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "Unviable",
+      "log_path": "log/crates__rr-core__src__crypto.rs_line_25_col_9.log",
+      "diff_path": "diff/crates__rr-core__src__crypto.rs_line_25_col_9.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 0.251451764,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "crates/rr-core/src/identity.rs:17:9: replace <impl fmt::Debug for Identity>::fmt -> fmt::Result with Ok(Default::default())",
+          "package": "rr-core",
+          "file": "crates/rr-core/src/identity.rs",
+          "function": {
+            "function_name": "<impl fmt::Debug for Identity>::fmt",
+            "return_type": "-> fmt::Result",
+            "span": {
+              "start": {
+                "line": 16,
+                "column": 5
+              },
+              "end": {
+                "line": 20,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 17,
+              "column": 9
+            },
+            "end": {
+              "line": 19,
+              "column": 22
+            }
+          },
+          "replacement": "Ok(Default::default())",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/crates__rr-core__src__identity.rs_line_17_col_9.log",
+      "diff_path": "diff/crates__rr-core__src__identity.rs_line_17_col_9.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 0.601987578,
+          "process_status": "Success",
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 0.201373632,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "crates/rr-core/src/identity.rs:31:9: replace Identity::from_secret_key -> Self with Default::default()",
+          "package": "rr-core",
+          "file": "crates/rr-core/src/identity.rs",
+          "function": {
+            "function_name": "Identity::from_secret_key",
+            "return_type": "-> Self",
+            "span": {
+              "start": {
+                "line": 30,
+                "column": 5
+              },
+              "end": {
+                "line": 34,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 31,
+              "column": 9
+            },
+            "end": {
+              "line": 33,
+              "column": 10
+            }
+          },
+          "replacement": "Default::default()",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "MissedMutant",
+      "log_path": "log/crates__rr-core__src__identity.rs_line_31_col_9.log",
+      "diff_path": "diff/crates__rr-core__src__identity.rs_line_31_col_9.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 0.551780488,
+          "process_status": "Success",
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 0.752767529,
+          "process_status": "Success",
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "crates/rr-core/src/identity.rs:37:9: replace Identity::from_seed_phrase -> Result<Self, nip06::Error> with Ok(Default::default())",
+          "package": "rr-core",
+          "file": "crates/rr-core/src/identity.rs",
+          "function": {
+            "function_name": "Identity::from_seed_phrase",
+            "return_type": "-> Result<Self, nip06::Error>",
+            "span": {
+              "start": {
+                "line": 36,
+                "column": 5
+              },
+              "end": {
+                "line": 40,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 37,
+              "column": 9
+            },
+            "end": {
+              "line": 39,
+              "column": 26
+            }
+          },
+          "replacement": "Ok(Default::default())",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/crates__rr-core__src__identity.rs_line_37_col_9.log",
+      "diff_path": "diff/crates__rr-core__src__identity.rs_line_37_col_9.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 0.6519669,
+          "process_status": "Success",
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 0.151320929,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "crates/rr-core/src/identity.rs:43:9: replace Identity::from_nsec -> Result<Self, Box<dyn std::error::Error>> with Ok(Default::default())",
+          "package": "rr-core",
+          "file": "crates/rr-core/src/identity.rs",
+          "function": {
+            "function_name": "Identity::from_nsec",
+            "return_type": "-> Result<Self, Box<dyn std::error::Error>>",
+            "span": {
+              "start": {
+                "line": 42,
+                "column": 5
+              },
+              "end": {
+                "line": 47,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 43,
+              "column": 9
+            },
+            "end": {
+              "line": 46,
+              "column": 11
+            }
+          },
+          "replacement": "Ok(Default::default())",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/crates__rr-core__src__identity.rs_line_43_col_9.log",
+      "diff_path": "diff/crates__rr-core__src__identity.rs_line_43_col_9.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 0.904358705,
+          "process_status": "Success",
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 0.301552259,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "crates/rr-core/src/identity.rs:50:9: replace Identity::generate_seed_phrase -> Result<String, Box<dyn std::error::Error>> with Ok(String::new())",
+          "package": "rr-core",
+          "file": "crates/rr-core/src/identity.rs",
+          "function": {
+            "function_name": "Identity::generate_seed_phrase",
+            "return_type": "-> Result<String, Box<dyn std::error::Error>>",
+            "span": {
+              "start": {
+                "line": 49,
+                "column": 5
+              },
+              "end": {
+                "line": 52,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 50,
+              "column": 9
+            },
+            "end": {
+              "line": 51,
+              "column": 33
+            }
+          },
+          "replacement": "Ok(String::new())",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/crates__rr-core__src__identity.rs_line_50_col_9.log",
+      "diff_path": "diff/crates__rr-core__src__identity.rs_line_50_col_9.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 1.053458978,
+          "process_status": "Success",
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 0.20116886,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "crates/rr-core/src/identity.rs:50:9: replace Identity::generate_seed_phrase -> Result<String, Box<dyn std::error::Error>> with Ok(\"xyzzy\".into())",
+          "package": "rr-core",
+          "file": "crates/rr-core/src/identity.rs",
+          "function": {
+            "function_name": "Identity::generate_seed_phrase",
+            "return_type": "-> Result<String, Box<dyn std::error::Error>>",
+            "span": {
+              "start": {
+                "line": 49,
+                "column": 5
+              },
+              "end": {
+                "line": 52,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 50,
+              "column": 9
+            },
+            "end": {
+              "line": 51,
+              "column": 33
+            }
+          },
+          "replacement": "Ok(\"xyzzy\".into())",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/crates__rr-core__src__identity.rs_line_50_col_9_001.log",
+      "diff_path": "diff/crates__rr-core__src__identity.rs_line_50_col_9_001.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 0.601647165,
+          "process_status": "Success",
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 0.151407143,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "crates/rr-core/src/identity.rs:55:9: replace Identity::keys -> &Keys with Box::leak(Box::new(Default::default()))",
+          "package": "rr-core",
+          "file": "crates/rr-core/src/identity.rs",
+          "function": {
+            "function_name": "Identity::keys",
+            "return_type": "-> &Keys",
+            "span": {
+              "start": {
+                "line": 54,
+                "column": 5
+              },
+              "end": {
+                "line": 56,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 55,
+              "column": 9
+            },
+            "end": {
+              "line": 55,
+              "column": 19
+            }
+          },
+          "replacement": "Box::leak(Box::new(Default::default()))",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "Unviable",
+      "log_path": "log/crates__rr-core__src__identity.rs_line_55_col_9.log",
+      "diff_path": "diff/crates__rr-core__src__identity.rs_line_55_col_9.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 0.301350091,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "crates/rr-core/src/identity.rs:59:9: replace Identity::public_key -> PublicKey with Default::default()",
+          "package": "rr-core",
+          "file": "crates/rr-core/src/identity.rs",
+          "function": {
+            "function_name": "Identity::public_key",
+            "return_type": "-> PublicKey",
+            "span": {
+              "start": {
+                "line": 58,
+                "column": 5
+              },
+              "end": {
+                "line": 60,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 59,
+              "column": 9
+            },
+            "end": {
+              "line": 59,
+              "column": 31
+            }
+          },
+          "replacement": "Default::default()",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "Unviable",
+      "log_path": "log/crates__rr-core__src__identity.rs_line_59_col_9.log",
+      "diff_path": "diff/crates__rr-core__src__identity.rs_line_59_col_9.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 0.301461836,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "crates/rr-core/src/identity.rs:63:9: replace Identity::public_key_bech32 -> String with String::new()",
+          "package": "rr-core",
+          "file": "crates/rr-core/src/identity.rs",
+          "function": {
+            "function_name": "Identity::public_key_bech32",
+            "return_type": "-> String",
+            "span": {
+              "start": {
+                "line": 62,
+                "column": 5
+              },
+              "end": {
+                "line": 67,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 63,
+              "column": 9
+            },
+            "end": {
+              "line": 66,
+              "column": 65
+            }
+          },
+          "replacement": "String::new()",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/crates__rr-core__src__identity.rs_line_63_col_9.log",
+      "diff_path": "diff/crates__rr-core__src__identity.rs_line_63_col_9.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 0.701763893,
+          "process_status": "Success",
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 0.201559738,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "crates/rr-core/src/identity.rs:63:9: replace Identity::public_key_bech32 -> String with \"xyzzy\".into()",
+          "package": "rr-core",
+          "file": "crates/rr-core/src/identity.rs",
+          "function": {
+            "function_name": "Identity::public_key_bech32",
+            "return_type": "-> String",
+            "span": {
+              "start": {
+                "line": 62,
+                "column": 5
+              },
+              "end": {
+                "line": 67,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 63,
+              "column": 9
+            },
+            "end": {
+              "line": 66,
+              "column": 65
+            }
+          },
+          "replacement": "\"xyzzy\".into()",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/crates__rr-core__src__identity.rs_line_63_col_9_001.log",
+      "diff_path": "diff/crates__rr-core__src__identity.rs_line_63_col_9_001.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 0.552045305,
+          "process_status": "Success",
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 0.201630554,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "crates/rr-core/src/identity.rs:70:9: replace Identity::secret_key_bech32 -> String with String::new()",
+          "package": "rr-core",
+          "file": "crates/rr-core/src/identity.rs",
+          "function": {
+            "function_name": "Identity::secret_key_bech32",
+            "return_type": "-> String",
+            "span": {
+              "start": {
+                "line": 69,
+                "column": 5
+              },
+              "end": {
+                "line": 74,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 70,
+              "column": 9
+            },
+            "end": {
+              "line": 73,
+              "column": 65
+            }
+          },
+          "replacement": "String::new()",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/crates__rr-core__src__identity.rs_line_70_col_9.log",
+      "diff_path": "diff/crates__rr-core__src__identity.rs_line_70_col_9.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 0.551775268,
+          "process_status": "Success",
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 0.201658157,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "crates/rr-core/src/identity.rs:70:9: replace Identity::secret_key_bech32 -> String with \"xyzzy\".into()",
+          "package": "rr-core",
+          "file": "crates/rr-core/src/identity.rs",
+          "function": {
+            "function_name": "Identity::secret_key_bech32",
+            "return_type": "-> String",
+            "span": {
+              "start": {
+                "line": 69,
+                "column": 5
+              },
+              "end": {
+                "line": 74,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 70,
+              "column": 9
+            },
+            "end": {
+              "line": 73,
+              "column": 65
+            }
+          },
+          "replacement": "\"xyzzy\".into()",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/crates__rr-core__src__identity.rs_line_70_col_9_001.log",
+      "diff_path": "diff/crates__rr-core__src__identity.rs_line_70_col_9_001.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 0.552261068,
+          "process_status": "Success",
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 0.20175363,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "crates/rr-core/src/identity.rs:96:9: replace IdentityManager::default_data_dir -> PathBuf with Default::default()",
+          "package": "rr-core",
+          "file": "crates/rr-core/src/identity.rs",
+          "function": {
+            "function_name": "IdentityManager::default_data_dir",
+            "return_type": "-> PathBuf",
+            "span": {
+              "start": {
+                "line": 95,
+                "column": 5
+              },
+              "end": {
+                "line": 100,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 96,
+              "column": 9
+            },
+            "end": {
+              "line": 99,
+              "column": 40
+            }
+          },
+          "replacement": "Default::default()",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "MissedMutant",
+      "log_path": "log/crates__rr-core__src__identity.rs_line_96_col_9.log",
+      "diff_path": "diff/crates__rr-core__src__identity.rs_line_96_col_9.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 0.601969592,
+          "process_status": "Success",
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 0.752461782,
+          "process_status": "Success",
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "crates/rr-core/src/identity.rs:103:9: replace IdentityManager::load_or_create -> Result<Identity, Box<dyn std::error::Error>> with Ok(Default::default())",
+          "package": "rr-core",
+          "file": "crates/rr-core/src/identity.rs",
+          "function": {
+            "function_name": "IdentityManager::load_or_create",
+            "return_type": "-> Result<Identity, Box<dyn std::error::Error>>",
+            "span": {
+              "start": {
+                "line": 102,
+                "column": 5
+              },
+              "end": {
+                "line": 111,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 103,
+              "column": 9
+            },
+            "end": {
+              "line": 110,
+              "column": 10
+            }
+          },
+          "replacement": "Ok(Default::default())",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/crates__rr-core__src__identity.rs_line_103_col_9.log",
+      "diff_path": "diff/crates__rr-core__src__identity.rs_line_103_col_9.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 0.702433937,
+          "process_status": "Success",
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 0.202069695,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "crates/rr-core/src/identity.rs:114:9: replace IdentityManager::load -> Result<Identity, Box<dyn std::error::Error>> with Ok(Default::default())",
+          "package": "rr-core",
+          "file": "crates/rr-core/src/identity.rs",
+          "function": {
+            "function_name": "IdentityManager::load",
+            "return_type": "-> Result<Identity, Box<dyn std::error::Error>>",
+            "span": {
+              "start": {
+                "line": 113,
+                "column": 5
+              },
+              "end": {
+                "line": 119,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 114,
+              "column": 9
+            },
+            "end": {
+              "line": 118,
+              "column": 34
+            }
+          },
+          "replacement": "Ok(Default::default())",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/crates__rr-core__src__identity.rs_line_114_col_9.log",
+      "diff_path": "diff/crates__rr-core__src__identity.rs_line_114_col_9.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 0.701723345,
+          "process_status": "Success",
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 0.201510524,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "crates/rr-core/src/identity.rs:122:9: replace IdentityManager::save -> Result<(), Box<dyn std::error::Error>> with Ok(())",
+          "package": "rr-core",
+          "file": "crates/rr-core/src/identity.rs",
+          "function": {
+            "function_name": "IdentityManager::save",
+            "return_type": "-> Result<(), Box<dyn std::error::Error>>",
+            "span": {
+              "start": {
+                "line": 121,
+                "column": 5
+              },
+              "end": {
+                "line": 136,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 122,
+              "column": 9
+            },
+            "end": {
+              "line": 135,
+              "column": 15
+            }
+          },
+          "replacement": "Ok(())",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/crates__rr-core__src__identity.rs_line_122_col_9.log",
+      "diff_path": "diff/crates__rr-core__src__identity.rs_line_122_col_9.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 0.651902245,
+          "process_status": "Success",
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 0.202450745,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "crates/rr-core/src/message.rs:18:9: replace MessageService::send -> Result<EventId, Box<dyn std::error::Error>> with Ok(Default::default())",
+          "package": "rr-core",
+          "file": "crates/rr-core/src/message.rs",
+          "function": {
+            "function_name": "MessageService::send",
+            "return_type": "-> Result<EventId, Box<dyn std::error::Error>>",
+            "span": {
+              "start": {
+                "line": 12,
+                "column": 5
+              },
+              "end": {
+                "line": 22,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 18,
+              "column": 9
+            },
+            "end": {
+              "line": 21,
+              "column": 20
+            }
+          },
+          "replacement": "Ok(Default::default())",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "Unviable",
+      "log_path": "log/crates__rr-core__src__message.rs_line_18_col_9.log",
+      "diff_path": "diff/crates__rr-core__src__message.rs_line_18_col_9.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 0.251423319,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "crates/rr-core/src/message.rs:29:9: replace MessageService::receive -> Result<UnwrappedGift, Box<dyn std::error::Error>> with Ok(Default::default())",
+          "package": "rr-core",
+          "file": "crates/rr-core/src/message.rs",
+          "function": {
+            "function_name": "MessageService::receive",
+            "return_type": "-> Result<UnwrappedGift, Box<dyn std::error::Error>>",
+            "span": {
+              "start": {
+                "line": 24,
+                "column": 5
+              },
+              "end": {
+                "line": 31,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 29,
+              "column": 9
+            },
+            "end": {
+              "line": 30,
+              "column": 22
+            }
+          },
+          "replacement": "Ok(Default::default())",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "Unviable",
+      "log_path": "log/crates__rr-core__src__message.rs_line_29_col_9.log",
+      "diff_path": "diff/crates__rr-core__src__message.rs_line_29_col_9.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 0.251315472,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "crates/rr-core/src/transport/mod.rs:12:9: replace <impl TransportProvider for nostr::NostrTransport>::client -> &Client with Box::leak(Box::new(Default::default()))",
+          "package": "rr-core",
+          "file": "crates/rr-core/src/transport/mod.rs",
+          "function": {
+            "function_name": "<impl TransportProvider for nostr::NostrTransport>::client",
+            "return_type": "-> &Client",
+            "span": {
+              "start": {
+                "line": 11,
+                "column": 5
+              },
+              "end": {
+                "line": 13,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 12,
+              "column": 9
+            },
+            "end": {
+              "line": 12,
+              "column": 22
+            }
+          },
+          "replacement": "Box::leak(Box::new(Default::default()))",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "MissedMutant",
+      "log_path": "log/crates__rr-core__src__transport__mod.rs_line_12_col_9.log",
+      "diff_path": "diff/crates__rr-core__src__transport__mod.rs_line_12_col_9.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 0.703016973,
+          "process_status": "Success",
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 0.75228406,
+          "process_status": "Success",
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "crates/rr-core/src/transport/mod.rs:16:9: replace <impl TransportProvider for nostr::NostrTransport>::kind -> &'static str with \"\"",
+          "package": "rr-core",
+          "file": "crates/rr-core/src/transport/mod.rs",
+          "function": {
+            "function_name": "<impl TransportProvider for nostr::NostrTransport>::kind",
+            "return_type": "-> &'static str",
+            "span": {
+              "start": {
+                "line": 15,
+                "column": 5
+              },
+              "end": {
+                "line": 17,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 16,
+              "column": 9
+            },
+            "end": {
+              "line": 16,
+              "column": 16
+            }
+          },
+          "replacement": "\"\"",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "MissedMutant",
+      "log_path": "log/crates__rr-core__src__transport__mod.rs_line_16_col_9.log",
+      "diff_path": "diff/crates__rr-core__src__transport__mod.rs_line_16_col_9.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 0.601709002,
+          "process_status": "Success",
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 0.752520043,
+          "process_status": "Success",
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "crates/rr-core/src/transport/mod.rs:16:9: replace <impl TransportProvider for nostr::NostrTransport>::kind -> &'static str with \"xyzzy\"",
+          "package": "rr-core",
+          "file": "crates/rr-core/src/transport/mod.rs",
+          "function": {
+            "function_name": "<impl TransportProvider for nostr::NostrTransport>::kind",
+            "return_type": "-> &'static str",
+            "span": {
+              "start": {
+                "line": 15,
+                "column": 5
+              },
+              "end": {
+                "line": 17,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 16,
+              "column": 9
+            },
+            "end": {
+              "line": 16,
+              "column": 16
+            }
+          },
+          "replacement": "\"xyzzy\"",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "MissedMutant",
+      "log_path": "log/crates__rr-core__src__transport__mod.rs_line_16_col_9_001.log",
+      "diff_path": "diff/crates__rr-core__src__transport__mod.rs_line_16_col_9_001.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 0.601987055,
+          "process_status": "Success",
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 0.752527867,
+          "process_status": "Success",
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "crates/rr-core/src/transport/nostr.rs:21:9: replace NostrTransport::with_keys -> Result<Self, Box<dyn std::error::Error>> with Ok(Default::default())",
+          "package": "rr-core",
+          "file": "crates/rr-core/src/transport/nostr.rs",
+          "function": {
+            "function_name": "NostrTransport::with_keys",
+            "return_type": "-> Result<Self, Box<dyn std::error::Error>>",
+            "span": {
+              "start": {
+                "line": 17,
+                "column": 5
+              },
+              "end": {
+                "line": 25,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 21,
+              "column": 9
+            },
+            "end": {
+              "line": 24,
+              "column": 28
+            }
+          },
+          "replacement": "Ok(Default::default())",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "Unviable",
+      "log_path": "log/crates__rr-core__src__transport__nostr.rs_line_21_col_9.log",
+      "diff_path": "diff/crates__rr-core__src__transport__nostr.rs_line_21_col_9.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 0.251303719,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "crates/rr-core/src/transport/nostr.rs:28:9: replace NostrTransport::client -> &Client with Box::leak(Box::new(Default::default()))",
+          "package": "rr-core",
+          "file": "crates/rr-core/src/transport/nostr.rs",
+          "function": {
+            "function_name": "NostrTransport::client",
+            "return_type": "-> &Client",
+            "span": {
+              "start": {
+                "line": 27,
+                "column": 5
+              },
+              "end": {
+                "line": 29,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 28,
+              "column": 9
+            },
+            "end": {
+              "line": 28,
+              "column": 21
+            }
+          },
+          "replacement": "Box::leak(Box::new(Default::default()))",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "MissedMutant",
+      "log_path": "log/crates__rr-core__src__transport__nostr.rs_line_28_col_9.log",
+      "diff_path": "diff/crates__rr-core__src__transport__nostr.rs_line_28_col_9.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 0.652205245,
+          "process_status": "Success",
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 0.751958045,
+          "process_status": "Success",
+          "argv": [
+            "/home/giak/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=rr-core@0.1.0"
+          ]
+        }
+      ]
+    }
+  ],
+  "total_mutants": 28,
+  "missed": 6,
+  "caught": 16,
+  "timeout": 0,
+  "unviable": 6,
+  "success": 0,
+  "start_time": "2026-05-22T14:49:31.660256736Z",
+  "end_time": "2026-05-22T14:50:08.916092279Z",
+  "cargo_mutants_version": "27.0.0"
+}

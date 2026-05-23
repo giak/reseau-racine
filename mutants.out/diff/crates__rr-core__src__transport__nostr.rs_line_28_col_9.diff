@@ -1,0 +1,15 @@
+--- crates/rr-core/src/transport/nostr.rs
++++ replace NostrTransport::client -> &Client with Box::leak(Box::new(Default::default()))
+@@ -20,11 +20,11 @@
+     ) -> Result<Self, Box<dyn std::error::Error>> {
+         let client = Client::new(keys);
+         client.add_relay(relay_url).await?;
+         client.connect().await;
+         Ok(Self { client })
+     }
+ 
+     pub fn client(&self) -> &Client {
+-        &self.client
++        Box::leak(Box::new(Default::default())) /* ~ changed by cargo-mutants ~ */
+     }
+ }

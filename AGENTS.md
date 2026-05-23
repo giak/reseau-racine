@@ -28,6 +28,65 @@ Prouve par le code/l'output/le test qui passe. Rapport sténographique : fait, t
 
 ---
 
+## 4. PENSÉE CRITIQUE & SIMPLICITÉ
+
+### 4.1 Pensée avant l'action
+
+**Ne pas supposer. Ne pas cacher la confusion. Montrer les compromis.**
+
+Avant d'implémenter :
+- Énoncer vos hypothèses explicitement. Si incertain, demander.
+- Si plusieurs interprétations existent, les présenter - ne pas choisir silencieusement.
+- Si une approche plus simple existe, le dire. Pousser lorsqu'approprié.
+- Si quelque chose est unclear, s'arrêter. Nommer ce qui est confus. Demander.
+
+### 4.2 Simplicité d'abord
+
+**Code minimal qui résout le problème. Rien de spéculatif.**
+
+- Aucune fonctionnalité au-delà de ce qui a été demandé.
+- Aucune abstraction pour du code à usage unique.
+- Aucune "flexibilité" ou "configurabilité" qui n'a pas été demandée.
+- Aucune gestion d'erreur pour des scénarios impossibles.
+- Si vous écrivez 200 lignes alors qu'elles pourraient être 50, réécrivez-le.
+
+Posez-vous la question : "Un ingénieur senior dirait-il que c'est trop compliqué ?" Si oui, simplifiez.
+
+### 4.3 Changements chirurgicaux
+
+**Ne touchez que ce qui est nécessaire. Nettoyez seulement votre propre désordre.**
+
+Lors de l'édition de code existant :
+- Ne pas "améliorer" le code, les commentaires ou la mise en forme adjacents.
+- Ne pas refactoriser des choses qui ne sont pas cassées.
+- Correspondre au style existant, même si vous le feriez autrement.
+- Si vous remarquez du code mort sans rapport, le mentionner - ne pas le supprimer.
+
+Lorsque vos changements créent des orphelins :
+- Supprimer les imports/variables/fonctions que VOS changements ont rendus inutilisés.
+- Ne pas supprimer le code mort préexistant sauf si demandé.
+
+Le test : Chaque ligne modifiée devrait remonter directement à la demande de l'utilisateur.
+
+### 4.4 Exécution orientée vers les objectifs
+
+**Définir les critères de succès. Boucler jusqu'à vérification.**
+
+Transformer des tâches en objectifs vérifiables :
+- "Ajouter une validation" → "Écrire des tests pour des entrées invalides, puis les faire passer"
+- "Corriger le bug" → "Écrire un test qui le reproduit, puis le faire passer"
+- "Refactoriser X" → "S'assurer que les tests passent avant et après"
+
+Pour des tâches multi-étapes, indiquer un plan bref :
+```
+1. [Étape] → vérifier : [contrôle]
+2. [Étape] → vérifier : [contrôle]
+3. [Étape] → vérifier : [contrôle]
+```
+
+Des critères de succès forts permettent de boucler indépendamment. Des critères faibles ("faire fonctionner") nécessitent des clarifications constantes.
+
+
 # Development Workflow
 
 ## Git & Branch Strategy

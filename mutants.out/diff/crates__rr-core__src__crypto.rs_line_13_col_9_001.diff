@@ -1,0 +1,21 @@
+--- crates/rr-core/src/crypto.rs
++++ replace CryptoProvider::encrypt -> Result<String, nip44::Error> with Ok("xyzzy".into())
+@@ -5,17 +5,17 @@
+ pub struct CryptoProvider;
+ 
+ impl CryptoProvider {
+     pub fn encrypt(
+         secret_key: &SecretKey,
+         public_key: &PublicKey,
+         content: &str,
+     ) -> Result<String, nip44::Error> {
+-        nip44::encrypt(secret_key, public_key, content, nip44::Version::V2)
++        Ok("xyzzy".into()) /* ~ changed by cargo-mutants ~ */
+     }
+ 
+     pub fn decrypt(
+         secret_key: &SecretKey,
+         public_key: &PublicKey,
+         payload: &str,
+     ) -> Result<String, nip44::Error> {
+         nip44::decrypt(secret_key, public_key, payload)

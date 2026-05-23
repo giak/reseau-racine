@@ -1,0 +1,34 @@
+--- crates/rr-core/src/identity.rs
++++ replace IdentityManager::save -> Result<(), Box<dyn std::error::Error>> with Ok(())
+@@ -114,30 +114,17 @@
+         let key_path = self.data_dir.join("keys.json");
+         let content = std::fs::read_to_string(&key_path)?;
+         let data: serde_json::Value = serde_json::from_str(&content)?;
+         let nsec = data["nsec"].as_str().ok_or("missing nsec field")?;
+         Identity::from_nsec(nsec)
+     }
+ 
+     pub fn save(&self, identity: &Identity) -> Result<(), Box<dyn std::error::Error>> {
+-        std::fs::create_dir_all(&self.data_dir)?;
+-        let key_path = self.data_dir.join("keys.json");
+-        let data = serde_json::json!({
+-            "npub": identity.public_key_bech32(),
+-            "nsec": identity.secret_key_bech32(),
+-        });
+-        let content = serde_json::to_string_pretty(&data)?;
+-        std::fs::write(&key_path, &content)?;
+-        #[cfg(unix)]
+-        {
+-            use std::os::unix::fs::PermissionsExt;
+-            std::fs::set_permissions(&key_path, std::fs::Permissions::from_mode(0o600))?;
+-        }
+-        Ok(())
++        Ok(()) /* ~ changed by cargo-mutants ~ */
+     }
+ }
+ 
+ #[cfg(test)]
+ mod tests {
+     use super::*;
+ 
+     #[test]

@@ -1,0 +1,28 @@
+--- crates/rr-core/src/identity.rs
++++ replace IdentityManager::load_or_create -> Result<Identity, Box<dyn std::error::Error>> with Ok(Default::default())
+@@ -95,24 +95,17 @@
+     pub fn default_data_dir() -> PathBuf {
+         let home = std::env::var("HOME")
+             .or_else(|_| std::env::var("USERPROFILE"))
+             .unwrap_or_else(|_| ".".to_string());
+         PathBuf::from(home).join(".rr")
+     }
+ 
+     pub fn load_or_create(&self) -> Result<Identity, Box<dyn std::error::Error>> {
+-        let key_path = self.data_dir.join("keys.json");
+-        if key_path.exists() {
+-            self.load()
+-        } else {
+-            let identity = Identity::new();
+-            self.save(&identity)?;
+-            Ok(identity)
+-        }
++        Ok(Default::default()) /* ~ changed by cargo-mutants ~ */
+     }
+ 
+     pub fn load(&self) -> Result<Identity, Box<dyn std::error::Error>> {
+         let key_path = self.data_dir.join("keys.json");
+         let content = std::fs::read_to_string(&key_path)?;
+         let data: serde_json::Value = serde_json::from_str(&content)?;
+         let nsec = data["nsec"].as_str().ok_or("missing nsec field")?;
+         Identity::from_nsec(nsec)

@@ -1,0 +1,19 @@
+--- crates/rr-core/src/transport/mod.rs
++++ replace <impl TransportProvider for nostr::NostrTransport>::client -> &Client with Box::leak(Box::new(Default::default()))
+@@ -4,15 +4,15 @@
+ 
+ pub trait TransportProvider: Send + Sync {
+     fn client(&self) -> &Client;
+     fn kind(&self) -> &'static str;
+ }
+ 
+ impl TransportProvider for nostr::NostrTransport {
+     fn client(&self) -> &Client {
+-        self.client()
++        Box::leak(Box::new(Default::default())) /* ~ changed by cargo-mutants ~ */
+     }
+ 
+     fn kind(&self) -> &'static str {
+         "nostr"
+     }
+ }

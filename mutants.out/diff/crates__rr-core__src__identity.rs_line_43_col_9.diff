@@ -1,0 +1,24 @@
+--- crates/rr-core/src/identity.rs
++++ replace Identity::from_nsec -> Result<Self, Box<dyn std::error::Error>> with Ok(Default::default())
+@@ -35,20 +35,17 @@
+ 
+     pub fn from_seed_phrase(mnemonic_str: &str, passphrase: &str) -> Result<Self, nip06::Error> {
+         let _mnemonic = Mnemonic::from_str(mnemonic_str).map_err(nip06::Error::BIP39)?;
+         let keys = Keys::from_mnemonic(mnemonic_str, Some(passphrase))?;
+         Ok(Self { keys })
+     }
+ 
+     pub fn from_nsec(nsec: &str) -> Result<Self, Box<dyn std::error::Error>> {
+-        let secret_key = SecretKey::from_bech32(nsec)?;
+-        Ok(Self {
+-            keys: Keys::new(secret_key),
+-        })
++        Ok(Default::default()) /* ~ changed by cargo-mutants ~ */
+     }
+ 
+     pub fn generate_seed_phrase() -> Result<String, Box<dyn std::error::Error>> {
+         let mnemonic = Mnemonic::generate(12)?;
+         Ok(mnemonic.to_string())
+     }
+ 
+     pub fn keys(&self) -> &Keys {

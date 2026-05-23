@@ -1,0 +1,21 @@
+--- crates/rr-core/src/identity.rs
++++ replace Identity::keys -> &Keys with Box::leak(Box::new(Default::default()))
+@@ -47,17 +47,17 @@
+     }
+ 
+     pub fn generate_seed_phrase() -> Result<String, Box<dyn std::error::Error>> {
+         let mnemonic = Mnemonic::generate(12)?;
+         Ok(mnemonic.to_string())
+     }
+ 
+     pub fn keys(&self) -> &Keys {
+-        &self.keys
++        Box::leak(Box::new(Default::default())) /* ~ changed by cargo-mutants ~ */
+     }
+ 
+     pub fn public_key(&self) -> PublicKey {
+         self.keys.public_key()
+     }
+ 
+     pub fn public_key_bech32(&self) -> String {
+         self.keys

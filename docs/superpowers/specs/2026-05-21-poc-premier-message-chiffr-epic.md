@@ -12,11 +12,13 @@
 │                                                                     │
 │  npub1alice... (secp256k1)                                         │
 │                                                                     │
-│  1. Écrit "Salut, ça marche"                                       │
+│  1. "rr send bob Salut, ça marche"                                 │
 │  2. Crée un Rumor (kind 14) — message en clair                     │
-│  3. Signe avec clé éphémère → Seal (kind 13)                       │
+│  3. Signe avec clé utilisateur → Seal (kind 13)                     │
 │  4. Chiffre avec NIP-44 V2 (ChaCha20-Poly1305) → GiftWrap (1059)   │
 │  5. Publie sur relais Nostr (WebSocket)                            │
+│                                                                     │
+│  tout ça via une seule appel : nostr-sdk::Client::send_private_msg │
 └──────────────────────────────┬──────────────────────────────────────┘
                                │
                     WebSocket wss://relay.damus.io
@@ -45,228 +47,194 @@
 │                                                                     │
 │  npub1bob... (secp256k1)                                           │
 │                                                                     │
-│  1. Reçoit GiftWrap (kind 1059)                                    │
-│  2. Déchiffre avec NIP-44 V2 (sa clé privée)                       │
-│  3. Ouvre le Seal (kind 13) → vérifie signature éphémère            │
-│  4. Extrait le Rumor (kind 14)                                     │
+│  1. "rr sync"                                                      │
+│  2. Subscribe aux events kind 1059 pour sa pubkey                  │
+│  3. Reçoit GiftWrap → déchiffre avec client.unwrap_gift_wrap()     │
+│  4. Extrait sender + rumor (UnsignedEvent)                         │
 │  5. Affiche : "Message de alice: Salut, ça marche"                 │
-│     ✓ Signature vérifiée (secp256k1)                               │
+│     ✓ Signature vérifiée (secp256k1 dans le seal)                  │
 │     ✓ Déchiffrement réussi (ChaCha20-Poly1305 AEAD)                │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Scope
+## Code actuel — Audit complet (2026-05-23)
 
-### Ce que le POC fait
+### Ce qui existe déjà (Phase 0 + Phase 1)
+| Module | Statut | Tests | Fichiers |
+|--------|--------|-------|----------|
+| **Identity** | ✅ COMPLET | 18 tests | `crates/rr-core/src/identity.rs` |
+| **Crypto** | ✅ COMPLET + 12 tests + 3 proptest | 15 | `crates/rr-core/src/crypto.rs` |
+| **Message** | 🟡 STUB | 0 | `crates/rr-core/src/message.rs` |
+| **Transport** | 🟡 BASIC | 0 | `crates/rr-core/src/transport/*.rs` |
+| **CLI** | 🟡 PARTIAL | — | `crates/rr-cli/src/main.rs` |
 
-1. **Génère une identité** — 1 clic → paire de clés secp256k1 (nsec/npub Nostr)
-2. **Chiffre un message E2E** — Alice chiffre avec NIP-44 V2 (ChaCha20-Poly1305), enveloppe avec NIP-59 gift wrap, publie sur un relais Nostr
-3. **Reçoit et déchiffre** — Bob reçoit le gift wrap via subscription, unwrap, déchiffre NIP-44, vérifie la signature secp256k1
-4. **Affiche le résultat** — "Message reçu de Alice : [contenu]"
+### Détail du code existant
 
-### Ce que le POC ne fait PAS
+**Identity (`identity.rs`)** : création/sauvegarde/chargement clés, seed phrase BIP39 (12 mots), nsec/npub bech32. Stockage JSON `~/.rr/keys.json` (permissions 0600). Manager avec `load_or_create()`. 18 tests unitaires passent.
 
-- Pas d'UI graphique (CLI suffit)
-- Pas de Reticulum, pas de LoRa, pas de Meshtastic
-- Pas de PeerTube, pas de vidéos, pas de streams
-- Pas de gouvernance, pas de cellules, pas de web of trust
-- Pas de cache, pas de P2P, pas de IPFS
-- Pas de détection de dégradation
-- Pas de groupes, pas de canaux
-- **Pas de post-quantum** (limitation secp256k1 — voir § Limitations)
+**Crypto (`crypto.rs`)** : wrapper autour de `nostr::nips::nip44::{encrypt, decrypt}`. Prend `&SecretKey`, `&PublicKey`, `&str`. Rejette messages vides et > 65535 bytes. 12 tests unitaires + 3 proptest passent.
 
-**Un seul transport** : internet via Nostr. Le "multi-transport" viendra après.
+**Message (`message.rs`)** : STUB. Deux fonctions qui wrappent l'API nostr-sdk :
+- `send(client, receiver_pubkey, content)` → `client.send_private_msg(receiver, content, [])`
+- `receive(client, gift_wrap)` → `client.unwrap_gift_wrap(gift_wrap)`
+- **Problème** : prend un `&Client` déjà connecté — ne gère pas la création du transport avec les vraies clés.
 
----
+**Transport (`transport/`)** : `NostrTransport` encapsule `nostr-sdk::Client`. Deux constructeurs :
+- `new(relay_url)` → génère des clés éphémères (⚠️ inutilisable pour NIP-17)
+- `with_keys(relay_url, keys)` → utilise des clés données (✅ nécessaire pour NIP-17)
+- **Problème** : `NostrTransport::new()` est le constructeur par défaut mais il est inutilisable pour envoyer des messages (clés éphémères).
 
-## Stack du POC
-
-| Composant | Choix | Pourquoi |
-|-----------|-------|----------|
-| **Langage** | Rust | Pure Rust, binaire unique, sécurité mémoire |
-| **Crypto** | Crate `nostr` v0.44.2 (secp256k1 + NIP-44 ChaCha20-Poly1305 + NIP-59) | Support natif NIP-17, pas de FFI C |
-| **Transport** | Nostr (NIP-17 pour messages privés, NIP-01 pour relays) | Standard actuel, remplace NIP-04 déprécié |
-| **Interface** | CLI (`cargo run`) | Pas de frontend à build, test rapide |
-| **Stockage** | Fichier JSON local | Pas de DB, juste `keys.json` et `messages.json` |
-| **Async** | tokio + tokio-tungstenite | WebSocket async vers relais Nostr |
-
-### Pourquoi pas NIP-04 (kind 4) ?
-
-NIP-04 est marqué **`unrecommended`** et **déprécié** :
-- Utilise AES-256-CBC (pas AEAD, pas d'authentification du ciphertext)
-- Utilise secp256k1 ECDH non standard (X coordinate only, pas de hash)
-- Fuites de métadonnées (qui envoie à qui est visible dans les tags)
-- **CVE-2026-41301** — attaques par messages forgés
-- Avertissement officiel : "must not be used for anything you really need to keep secret"
-
-NIP-17 (via NIP-44 + NIP-59) est le standard actuel :
-- ChaCha20-Poly1305 (AEAD authentifié)
-- X25519 ECDH standard
-- Gift wrap (NIP-59) cache les métadonnées
-- Support natif dans la crate `nostr` v0.44.2
+**CLI (`main.rs`)** : 
+| Commande | Statut |
+|----------|--------|
+| `rr init` | ✅ Génère identité + seed phrase + sauvegarde |
+| `rr identity` | ✅ Affiche npub |
+| `rr add-contact <npub> <name>` | ✅ Stocke dans `contacts.json` |
+| `rr contacts` | ✅ Liste les contacts |
+| `rr restore <phrase>` | ✅ Restaure depuis seed phrase |
+| `rr send <contact> <message>` | 🔜 STUB |
+| `rr sync` | 🔜 STUB |
 
 ---
 
-## Scénario de test
+## Stack
 
+| Composant | Choix | Version | Pourquoi |
+|-----------|-------|---------|----------|
+| **Langage** | Rust | stable 1.95.0 | Pure Rust, binaire unique, sécurité mémoire |
+| **Crypto** | `nostr` crate | 0.44.3 | NIP-44 ChaCha20-Poly1305 + NIP-59 seal/giftwrap natif |
+| **SDK Nostr** | `nostr-sdk` crate | 0.44.1 | Client WebSocket, `send_private_msg`, `unwrap_gift_wrap` |
+| **Transport** | WebSocket (tokio-tungstenite) | via nostr-sdk | Async, multiplexé |
+| **Interface** | CLI (clap) | `rr {init,identity,send,sync,...}` | Pas de frontend à build, test rapide |
+| **Stockage** | Fichier JSON local | — | `~/.rr/keys.json`, `~/.rr/contacts.json` |
+| **Async** | tokio | 1 (features=full) | Runtime standard |
+| **CLI framework** | clap | 4.6 | Parse, Subcommand derive |
+
+### Pourquoi NIP-17 (pas NIP-04)
+NIP-04 est déprécié : AES-256-CBC sans AEAD, fuites métadonnées, **CVE-2026-41301**. NIP-17 via NIP-44 + NIP-59 est le standard actuel, supporté nativement par les crates 0.44.
+
+### API utilisée
+
+**Envoi** — une seule ligne grâce à l'abstraction `nostr-sdk` :
+```rust
+// Cette appel fait : rumor (kind 14) → seal (kind 13) → gift wrap (1059)
+// signé avec les clés du signer, chiffré avec NIP-44 pour receiver
+client.send_private_msg(receiver_pubkey, "Salut, ça marche", vec![]).await?;
 ```
-Terminal 1 (Alice)                    Terminal 2 (Bob)
-──────────────                        ──────────────
-$ rr init                             $ rr init
-→ npub1alice...                       → npub1bob...
 
-$ rr add-contact npub1bob...
-→ Contact "bob" ajouté
-
-$ rr send bob "Salut, ça marche"
-→ Message envoyé (NIP-17) sur relais
-  Gift wrap kind: 1059
-
-                                      $ rr sync
-                                      → 1 gift wrap reçu
-                                      → Unwrapped: message de alice
-                                      → "Salut, ça marche"
-                                      ✓ Signature vérifiée (secp256k1)
-                                      ✓ Déchiffré (NIP-44 ChaCha20-Poly1305)
+**Réception** — unwrap automatique :
+```rust
+let unwrapped: UnwrappedGift = client.unwrap_gift_wrap(&event).await?;
+// unwrapped.sender → PublicKey de l'expéditeur
+// unwrapped.rumor → UnsignedEvent avec le contenu en clair
+// (Le seal est vérifié automatiquement — signature secp256k1)
 ```
 
 ---
 
-## Format du message POC (NIP-17)
-
-Le message passe par 3 couches :
+## Scénario de bout en bout
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  COUCHE 1 — RUMOR (kind 14 — PrivateDirectMessage)          │
-│  Le message réel, en clair (sera chiffré + signé)           │
-│                                                             │
-│  {                                                          │
-│    "kind": 14,                                              │
-│    "content": "Salut, ça marche",                           │
-│    "tags": [["p", "npub_bob"]],                             │
-│    "created_at": 1716300000                                 │
-│  }                                                          │
-└──────────────────────────┬──────────────────────────────────┘
-                           │ signé avec clé éphémère
-┌──────────────────────────▼──────────────────────────────────┐
-│  COUCHE 2 — SEAL (kind 13)                                  │
-│  Le rumor signé avec une clé secp256k1 ÉPHÉMÈRE             │
-│  (pas la clé principale d'Alice)                            │
-│                                                             │
-│  {                                                          │
-│    "kind": 13,                                              │
-│    "pubkey": "<clé éphémère_alice>",                        │
-│    "content": "<rumor JSON>",                               │
-│    "sig": "<signature secp256k1>"                           │
-│  }                                                          │
-│                                                             │
-│  → Le relais voit une signature mais ne peut pas            │
-│    la lier à l'identité réelle d'Alice                      │
-└──────────────────────────┬──────────────────────────────────┘
-                           │ chiffré NIP-44 V2 (ChaCha20-Poly1305)
-┌──────────────────────────▼──────────────────────────────────┐
-│  COUCHE 3 — GIFT WRAP (kind 1059)                           │
-│  Le seal chiffré avec la clé publique de Bob                │
-│  Seule métadonnée visible : le destinataire                 │
-│                                                             │
-│  {                                                          │
-│    "kind": 1059,                                            │
-│    "pubkey": "<clé éphémère>",                              │
-│    "content": "<chiffré NIP-44 V2>",                        │
-│    "tags": [["p", "npub_bob"]]  ← SEUL tag visible          │
-│    "created_at": 1716300000                                 │
-│  }                                                          │
-│                                                             │
-│  → Le relais voit : "quelqu'un envoie un blob à Bob"        │
-│  → Le relais ne voit PAS : qui, quoi, quand exactement      │
-└─────────────────────────────────────────────────────────────┘
+# Alice initialise son identité
+Terminal 1$ rr init
+→ ✅ Identité créée
+→ npub1alice...
+→ SEED PHRASE (à noter)
+
+# Bob aussi
+Terminal 2$ rr init
+→ npub1bob...
+
+# Alice ajoute Bob comme contact
+Terminal 1$ rr add-contact npub1bob... bob
+→ ✅ Contact ajouté : bob (npub1bob...)
+
+# Bob ajoute Alice
+Terminal 2$ rr add-contact npub1alice... alice
+→ ✅ Contact ajouté : alice (npub1alice...)
+
+# Alice envoie un message
+Terminal 1$ rr send bob "Salut, ça marche"
+→ 🔐 Envoi à bob (npub1bob...)
+→ ✅ Message envoyé (NIP-17 gift wrap kind:1059 sur wss://relay.damus.io)
+
+# Bob synchronise
+Terminal 2$ rr sync
+→ 🔄 Connexion au relais...
+→ 📨 1 nouveau message
+→ De: alice — "Salut, ça marche"
+→   ✓ Signature vérifiée (secp256k1 via seal)
+→   ✓ Déchiffré (NIP-44 ChaCha20-Poly1305)
 ```
 
 ---
 
-## Limitations de sécurité — Honnêteté totale
+## Architecture du code à implémenter
 
-### Ce que NIP-44 NE PROTÈGE PAS
+### Flux d'envoi (`cmd_send`)
+```
+1. Charger identité depuis ~/.rr/keys.json
+2. Résoudre le nom de contact → npub (depuis contacts.json)
+3. Créer NostrTransport::with_keys(relay_url, user_keys)
+4. Appeler message.send(client, receiver_pubkey, content)
+5. Afficher confirmation
+```
 
-| Propriété | Statut NIP-44 | Impact pour nous |
-|-----------|--------------|------------------|
-| **Confidentialité du contenu** | ✅ Oui (ChaCha20-Poly1305 AEAD) | Le contenu est sécurisé |
-| **Authentification de l'expéditeur** | ✅ Oui (signature secp256k1 dans le seal) | On peut vérifier qui a envoyé |
-| **Intégrité du message** | ✅ Oui (MAC Poly1305) | Le message n'est pas modifiable |
-| **Forward secrecy** | ❌ **NON** (Phase 0) | NIP-44 seul ne fournit pas. Prérequis conditionnel en Phase 1+ (voir spec architecture §13.7). |
-| **Post-compromise security** | ❌ **NON** (Phase 0) | Idem. |
-| **Déni plausible** | ❌ **NON** | On peut prouver qu'Alice a envoyé le message (signature dans le seal) |
-| **Protection post-quantique** | ❌ **NON** | Un ordinateur quantique pourrait déchiffrer |
-| **Anonymat IP** | ❌ **NON** | Le relais voit l'IP d'Alice et de Bob |
-| **Taille du message** | ⚠️ Partiel (padding) | La taille approximative est visible |
+### Flux de réception (`cmd_sync`)
+```
+1. Charger identité depuis ~/.rr/keys.json
+2. Créer NostrTransport::with_keys(relay_url, user_keys)
+3. S'abonner aux events Kind::GiftWrap (1059) taggés [p: user_pubkey]
+4. Pour chaque event reçu :
+   a. client.unwrap_gift_wrap(&event) → UnwrappedGift { sender, rumor }
+   b. Extraire rumor.content (le message en clair)
+   c. Résoudre sender → nom de contact (depuis contacts.json)
+   d. Afficher "De: <nom> — <message>"
+```
 
-### Audit Cure53 (déc. 2023)
+### Relais
+- URL configurable via `~/.rr/config.toml` ou variable d'env `RR_RELAY`
+- Défaut : `wss://relay.damus.io`
 
-L'audit officiel de NIP-44 par Cure53 a trouvé :
+---
 
-| ID | Finding | Sévérité |
-|----|---------|----------|
-| NOS-01-006 | Lack of forward secrecy | Medium |
-| NOS-01-005 | Missing range checks | Medium |
-| NOS-01-004 | Timing differences in HMAC comparison | Low |
-| NOS-01-007 | Lack of key separation (signing + encryption) | Low |
+## Fichiers modifiés
 
-### Conclusion honnête
-
-**Le POC utilise NIP-44 + NIP-17 + NIP-59, stack audité par Cure53.** Pas de forward secrecy — décision consciente (voir spec architecture §13.7). L'architecture de chiffrement est abstraite derrière un trait Rust, permettant d'ajouter Double Ratchet en Phase 1+ sans changer le transport ni le format événement.
-
-Ce qui reste non couvert :
-| Propriété | Statut |
-|-----------|--------|
-| **Forward secrecy** | ❌ Phase 0. Conditionnel Phase 1+ (§13.7). |
-| **Post-compromise** | ❌ Phase 0. Conditionnel Phase 1+. |
-| **Post-quantum** | ❌ secp256k1 vulnérable à Shor. NIP-44 v3 en discussion. |
-| **Anonymat IP** | ❌ le relais voit l'IP. Reticulum résoudra ça en Phase 3. |
-| **Déni plausible** | ❌ Phase 0 (seal signé par clé réelle d'Alice). ✅ Phase 1+ DR (seal signé par clé éphémère, rumor non signé). |
-| **Métadonnées** | ⚠️ NIP-59 gift wrap cache qui parle à qui, mais pas le timing.
+| Fichier | Changement |
+|---------|------------|
+| `crates/rr-core/src/lib.rs` | Ajouter public re-export de `TransportProvider` |
+| `crates/rr-core/src/transport/nostr.rs` | Ajouter méthode `relay_url()`, améliorer ergonomie |
+| `crates/rr-core/src/message.rs` | ~~STUB~~ → implémentation complète |
+| `crates/rr-cli/src/main.rs` | ~~STUB~~ `cmd_send` + `cmd_sync` |
+| `Cargo.toml` | Ajouter feature `default-relay` ou config |
+| `~/.rr/config.toml` (nouveau) | Configuration relais (optionnel) |
 
 ---
 
 ## Critère de succès
 
-**Un seul critère** : Alice et Bob, sur deux machines différentes, échangent un message chiffré E2E via NIP-17 (NIP-44 + NIP-59 gift wrap + ChaCha20-Poly1305) sur un relais Nostr public, sans aucun serveur intermédiaire à configurer.
+**Un seul critère** : Alice et Bob, sur deux machines différentes, échangent un message chiffré E2E via NIP-17 (NIP-44 + NIP-59 gift wrap) sur un relais Nostr public, sans aucun serveur intermédiaire à configurer.
 
-**Vérification** : le relais ne peut pas lire le contenu (gift wrap + NIP-44), seule Bob peut déchiffrer, la signature secp256k1 confirme l'expéditeur.
-
-Si ça marche → le concept est validé sur un socle stable et audité. La forward secrecy sera ajoutée en Phase 1+ si les conditions sont remplies (§13.7).
-Si ça ne marche pas → on corrige avant de construire quoi que ce soit d'autre.
+**Vérification** : le relais ne peut pas lire le contenu, seule Bob déchiffre, la signature secp256k1 confirme l'expéditeur.
 
 ---
 
 ## Timeline estimée
 
-| Étape | Durée | Détail |
-|-------|-------|--------|
-| Setup projet Rust + crate `nostr` | 1h | Cargo init, deps, tokio |
-| Génération de clés secp256k1 | 1h | nsec/npub, storage JSON |
-| Message NIP-17 (NIP-44 + NIP-59) | 3h | Encrypt, gift wrap, publish |
-| Réception message (unwrap + decrypt) | 2h | Subscription, unwrap, NIP-44 decrypt |
-| CLI ergonomique | 2h | `init`, `add-contact`, `send`, `sync` |
-| Test end-to-end (2 machines) | 2h | Validation |
-| Abstraction trait | 2h | `EncryptionProvider` trait + `Nip44Provider` impl (prépare migration DR future) |
-| **Total** | **~13h** | **2 jours à temps plein** |
+| Étape | Durée | Fichiers |
+|-------|-------|----------|
+| Mise à jour message.rs + transport | 1h | `message.rs`, `transport/nostr.rs` |
+| CLI send (avec contact résolution) | 1h30 | `main.rs` |
+| CLI sync (subscription + unwrap) | 2h | `main.rs` |
+| Config relais (optionnel) | 30min | `config.toml` parsing |
+| Test e2e (2 machines) | 2h | Validation manuelle |
+| Docs + TRACKING | 30min | `TRACKING.md` |
+| **Total** | **~7h30** | **1 jour temps plein** |
 
 ---
 
-## Prochaines étapes après le POC
+## Limitations (inchangé)
 
-Une fois le POC validé, on ajoute dans l'ordre :
-
-1. **Groupes & Cellules** (NIP-44 + clé de groupe X25519, cellules de 3)
-2. **Double Ratchet** (conditionnel : audit ou merge rust-nostr) — forward secrecy + post-compromise + sender-keys
-3. **Auto-destruction** (TTL via NIP-40)
-4. **Client Tauri** (UI graphique)
-5. **Reticulum WiFi** (second transport, même message chiffré, via leviculum Rust)
-6. **Détection de dégradation** (bascule auto internet → Reticulum)
-7. **Nœud relais** (Pi 5 + cache + IPFS)
-8. **Publication** (PeerTube + Owncast)
-
-Chaque étape est un EPIC séparé. On ne construit pas tout en même temps. Forward secrecy n'est pas dans le POC — décision consciente. L'architecture permet de l'ajouter plus tard sans changer le transport ni l'identité.
+Mêmes limitations documentées que dans la spec d'origine : pas de forward secrecy (conscient, conditionnel Phase 1+), pas de post-quantum, pas d'anonymat IP. Stack audité par Cure53 (déc. 2023). Voir spec architecture §13.7 pour le plan forward secrecy.

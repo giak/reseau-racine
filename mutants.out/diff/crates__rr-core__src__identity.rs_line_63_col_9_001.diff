@@ -1,0 +1,24 @@
+--- crates/rr-core/src/identity.rs
++++ replace Identity::public_key_bech32 -> String with "xyzzy".into()
+@@ -55,20 +55,17 @@
+         &self.keys
+     }
+ 
+     pub fn public_key(&self) -> PublicKey {
+         self.keys.public_key()
+     }
+ 
+     pub fn public_key_bech32(&self) -> String {
+-        self.keys
+-            .public_key()
+-            .to_bech32()
+-            .expect("valid public key always encodes to bech32")
++        "xyzzy".into() /* ~ changed by cargo-mutants ~ */
+     }
+ 
+     pub fn secret_key_bech32(&self) -> String {
+         self.keys
+             .secret_key()
+             .to_bech32()
+             .expect("valid secret key always encodes to bech32")
+     }

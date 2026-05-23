@@ -1,5 +1,9 @@
 use clap::{Parser, Subcommand};
+use nostr::nips::nip19::FromBech32;
+use nostr::PublicKey;
 use rr_core::identity::Identity;
+use rr_core::message::MessageService;
+use rr_core::transport::nostr::NostrTransport;
 use std::io::{self, Write};
 
 #[derive(Parser)]
@@ -163,8 +167,71 @@ async fn cmd_contacts() {
     }
 }
 
-async fn cmd_send(_contact: &str, _message: &str) {
-    println!("🔜 Envoi de message (EPIC 1 — à implémenter)");
+async fn cmd_send(contact: &str, message: &str) {
+    let data_dir = rr_core::identity::IdentityManager::default_data_dir();
+
+    // Charger l'identité
+    let manager = rr_core::identity::IdentityManager::new(&data_dir);
+    let identity = match manager.load() {
+        Ok(id) => id,
+        Err(e) => {
+            eprintln!("Erreur: aucune identité trouvée (lancez `rr init`) : {}", e);
+            return;
+        }
+    };
+
+    // Résoudre le contact
+    let contacts_path = data_dir.join("contacts.json");
+    let contacts: Vec<serde_json::Value> = if contacts_path.exists() {
+        match std::fs::read_to_string(&contacts_path) {
+            Ok(c) => serde_json::from_str(&c).unwrap_or_default(),
+            Err(_) => vec![],
+        }
+    } else {
+        vec![]
+    };
+    let receiver_npub = match contacts.iter().find(|c| c["name"] == contact) {
+        Some(c) => c["npub"].as_str().unwrap(),
+        None => {
+            eprintln!(
+                "Erreur: contact '{}' non trouvé. Ajoutez-le avec `rr add-contact`",
+                contact
+            );
+            return;
+        }
+    };
+    let receiver_pubkey = match PublicKey::from_bech32(receiver_npub) {
+        Ok(pk) => pk,
+        Err(e) => {
+            eprintln!("Erreur: npub invalide pour '{}': {}", contact, e);
+            return;
+        }
+    };
+
+    // Connexion au relais
+    let relay = std::env::var("RR_RELAY").unwrap_or_else(|_| "wss://relay.damus.io".to_string());
+    let transport = match NostrTransport::with_keys(&relay, identity.keys().clone()).await {
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("Erreur connexion au relais {}: {}", relay, e);
+            return;
+        }
+    };
+
+    // Envoyer
+    let msg_service = MessageService::new();
+    match msg_service
+        .send(transport.client(), receiver_pubkey, message)
+        .await
+    {
+        Ok(event_id) => {
+            println!("✅ Message envoyé à {} sur {}", contact, relay);
+            println!("   Event ID: {}", event_id.to_hex());
+        }
+        Err(e) => {
+            eprintln!("Erreur envoi message: {}", e);
+        }
+    }
 }
 
 async fn cmd_sync() {
