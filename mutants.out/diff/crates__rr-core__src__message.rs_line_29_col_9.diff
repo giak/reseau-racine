@@ -1,0 +1,22 @@
+--- crates/rr-core/src/message.rs
++++ replace MessageService::receive -> Result<UnwrappedGift, Box<dyn std::error::Error>> with Ok(Default::default())
+@@ -21,18 +21,17 @@
+         Ok(*output)
+     }
+ 
+     pub async fn receive(
+         &self,
+         client: &Client,
+         gift_wrap: &Event,
+     ) -> Result<UnwrappedGift, Box<dyn std::error::Error>> {
+-        let unwrapped = client.unwrap_gift_wrap(gift_wrap).await?;
+-        Ok(unwrapped)
++        Ok(Default::default()) /* ~ changed by cargo-mutants ~ */
+     }
+ }
+ 
+ impl Default for MessageService {
+     fn default() -> Self {
+         Self::new()
+     }
+ }

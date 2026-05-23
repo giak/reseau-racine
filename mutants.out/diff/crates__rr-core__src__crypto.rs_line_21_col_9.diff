@@ -1,0 +1,21 @@
+--- crates/rr-core/src/crypto.rs
++++ replace CryptoProvider::decrypt -> Result<String, nip44::Error> with Ok(String::new())
+@@ -13,17 +13,17 @@
+         nip44::encrypt(secret_key, public_key, content, nip44::Version::V2)
+     }
+ 
+     pub fn decrypt(
+         secret_key: &SecretKey,
+         public_key: &PublicKey,
+         payload: &str,
+     ) -> Result<String, nip44::Error> {
+-        nip44::decrypt(secret_key, public_key, payload)
++        Ok(String::new()) /* ~ changed by cargo-mutants ~ */
+     }
+ 
+     pub fn generate_keys() -> Keys {
+         Keys::generate()
+     }
+ }
+ 
+ #[cfg(test)]

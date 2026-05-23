@@ -1,0 +1,23 @@
+--- crates/rr-core/src/identity.rs
++++ replace Identity::from_secret_key -> Self with Default::default()
+@@ -23,19 +23,17 @@
+ impl Identity {
+     pub fn new() -> Self {
+         Self {
+             keys: Keys::generate(),
+         }
+     }
+ 
+     pub fn from_secret_key(secret_key: &SecretKey) -> Self {
+-        Self {
+-            keys: Keys::new(secret_key.clone()),
+-        }
++        Default::default() /* ~ changed by cargo-mutants ~ */
+     }
+ 
+     pub fn from_seed_phrase(mnemonic_str: &str, passphrase: &str) -> Result<Self, nip06::Error> {
+         let _mnemonic = Mnemonic::from_str(mnemonic_str).map_err(nip06::Error::BIP39)?;
+         let keys = Keys::from_mnemonic(mnemonic_str, Some(passphrase))?;
+         Ok(Self { keys })
+     }
+ 

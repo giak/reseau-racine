@@ -1,0 +1,21 @@
+--- crates/rr-core/src/crypto.rs
++++ replace CryptoProvider::generate_keys -> Keys with Default::default()
+@@ -17,17 +17,17 @@
+         secret_key: &SecretKey,
+         public_key: &PublicKey,
+         payload: &str,
+     ) -> Result<String, nip44::Error> {
+         nip44::decrypt(secret_key, public_key, payload)
+     }
+ 
+     pub fn generate_keys() -> Keys {
+-        Keys::generate()
++        Default::default() /* ~ changed by cargo-mutants ~ */
+     }
+ }
+ 
+ #[cfg(test)]
+ mod tests {
+     use super::*;
+ 
+     fn alice_bob() -> (Keys, Keys) {

@@ -1,0 +1,21 @@
+--- crates/rr-core/src/identity.rs
++++ replace Identity::public_key -> PublicKey with Default::default()
+@@ -51,17 +51,17 @@
+         Ok(mnemonic.to_string())
+     }
+ 
+     pub fn keys(&self) -> &Keys {
+         &self.keys
+     }
+ 
+     pub fn public_key(&self) -> PublicKey {
+-        self.keys.public_key()
++        Default::default() /* ~ changed by cargo-mutants ~ */
+     }
+ 
+     pub fn public_key_bech32(&self) -> String {
+         self.keys
+             .public_key()
+             .to_bech32()
+             .expect("valid public key always encodes to bech32")
+     }

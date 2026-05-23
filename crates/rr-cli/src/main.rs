@@ -1,6 +1,19 @@
 use clap::{Parser, Subcommand};
+use nostr::nips::nip19::{FromBech32, ToBech32};
+use nostr::nips::nip59::UnwrappedGift;
+use nostr::{Kind, PublicKey};
+use nostr_sdk::{Filter, RelayPoolNotification};
 use rr_core::identity::Identity;
+use rr_core::message::MessageService;
+use rr_core::transport::nostr::NostrTransport;
 use std::io::{self, Write};
+use std::path::PathBuf;
+
+fn data_dir() -> PathBuf {
+    std::env::var("RR_DATA_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| rr_core::identity::IdentityManager::default_data_dir())
+}
 
 #[derive(Parser)]
 #[command(name = "rr", about = "RéseauRacine CLI")]
@@ -44,8 +57,7 @@ async fn main() {
 
 async fn cmd_init() {
     let identity = Identity::new();
-    let data_dir = rr_core::identity::IdentityManager::default_data_dir();
-    let manager = rr_core::identity::IdentityManager::new(&data_dir);
+    let manager = rr_core::identity::IdentityManager::new(data_dir());
     if let Err(e) = manager.save(&identity) {
         eprintln!("Erreur: {}", e);
         return;
@@ -77,12 +89,11 @@ async fn cmd_init() {
         println!();
     }
 
-    println!("Stockée dans: {:?}", data_dir.join("keys.json"));
+    println!("Stockée dans: {:?}", data_dir().join("keys.json"));
 }
 
 async fn cmd_identity() {
-    let data_dir = rr_core::identity::IdentityManager::default_data_dir();
-    let manager = rr_core::identity::IdentityManager::new(&data_dir);
+    let manager = rr_core::identity::IdentityManager::new(data_dir());
     match manager.load() {
         Ok(identity) => {
             println!("npub: {}", identity.public_key_bech32());
@@ -94,8 +105,7 @@ async fn cmd_identity() {
 }
 
 async fn cmd_add_contact(npub: &str, name: &str) {
-    let contacts_dir = rr_core::identity::IdentityManager::default_data_dir();
-    let path = contacts_dir.join("contacts.json");
+    let path = data_dir().join("contacts.json");
     let mut contacts: Vec<serde_json::Value> = if path.exists() {
         let content = match std::fs::read_to_string(&path) {
             Ok(c) => c,
@@ -132,8 +142,7 @@ async fn cmd_add_contact(npub: &str, name: &str) {
 }
 
 async fn cmd_contacts() {
-    let contacts_dir = rr_core::identity::IdentityManager::default_data_dir();
-    let path = contacts_dir.join("contacts.json");
+    let path = data_dir().join("contacts.json");
     if path.exists() {
         let content = match std::fs::read_to_string(&path) {
             Ok(c) => c,
@@ -163,19 +172,182 @@ async fn cmd_contacts() {
     }
 }
 
-async fn cmd_send(_contact: &str, _message: &str) {
-    println!("🔜 Envoi de message (EPIC 1 — à implémenter)");
+async fn cmd_send(contact: &str, message: &str) {
+    // Charger l'identité
+    let manager = rr_core::identity::IdentityManager::new(data_dir());
+    let identity = match manager.load() {
+        Ok(id) => id,
+        Err(e) => {
+            eprintln!("Erreur: aucune identité trouvée (lancez `rr init`) : {}", e);
+            return;
+        }
+    };
+
+    // Résoudre le contact
+    let contacts_path = data_dir().join("contacts.json");
+    let contacts: Vec<serde_json::Value> = if contacts_path.exists() {
+        let content = match std::fs::read_to_string(&contacts_path) {
+            Ok(c) => c,
+            Err(e) => {
+                eprintln!("Erreur lecture contacts.json: {}", e);
+                return;
+            }
+        };
+        match serde_json::from_str(&content) {
+            Ok(c) => c,
+            Err(e) => {
+                eprintln!("Erreur: contacts.json corrompu: {}", e);
+                return;
+            }
+        }
+    } else {
+        vec![]
+    };
+    let receiver_npub = match contacts.iter().find(|c| c["name"] == contact) {
+        Some(c) => match c["npub"].as_str() {
+            Some(n) => n,
+            None => {
+                eprintln!(
+                    "Erreur: contact '{}' sans npub (contacts.json corrompu)",
+                    contact
+                );
+                return;
+            }
+        },
+        None => {
+            eprintln!(
+                "Erreur: contact '{}' non trouvé. Ajoutez-le avec `rr add-contact`",
+                contact
+            );
+            return;
+        }
+    };
+    let receiver_pubkey = match PublicKey::from_bech32(receiver_npub) {
+        Ok(pk) => pk,
+        Err(e) => {
+            eprintln!("Erreur: npub invalide pour '{}': {}", contact, e);
+            return;
+        }
+    };
+
+    // Connexion au relais
+    let relay = std::env::var("RR_RELAY").unwrap_or_else(|_| "wss://relay.damus.io".to_string());
+    let transport = match NostrTransport::with_keys(&relay, identity.keys().clone()).await {
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("Erreur connexion au relais {}: {}", relay, e);
+            return;
+        }
+    };
+
+    // Envoyer
+    let msg_service = MessageService::new();
+    match msg_service
+        .send(transport.client(), receiver_pubkey, message)
+        .await
+    {
+        Ok(event_id) => {
+            println!("✅ Message envoyé à {} sur {}", contact, relay);
+            println!("   Event ID: {}", event_id.to_hex());
+        }
+        Err(e) => {
+            eprintln!("Erreur envoi message: {}", e);
+        }
+    }
 }
 
 async fn cmd_sync() {
-    println!("🔜 Synchronisation (EPIC 1 — à implémenter)");
+    let data_dir = data_dir();
+
+    // Charger l'identité
+    let manager = rr_core::identity::IdentityManager::new(&data_dir);
+    let identity = match manager.load() {
+        Ok(id) => id,
+        Err(e) => {
+            eprintln!("Erreur: aucune identité trouvée (lancez `rr init`) : {}", e);
+            return;
+        }
+    };
+
+    // Connexion au relais
+    let relay = std::env::var("RR_RELAY").unwrap_or_else(|_| "wss://relay.damus.io".to_string());
+    let transport = match NostrTransport::with_keys(&relay, identity.keys().clone()).await {
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("Erreur connexion au relais {}: {}", relay, e);
+            return;
+        }
+    };
+
+    println!("🔄 Connecté à {}, synchronisation...", relay);
+    let client = transport.client().clone();
+
+    // Charger les contacts pour résoudre npub → nom
+    let contacts_path = data_dir.join("contacts.json");
+    let contacts: Vec<serde_json::Value> = if contacts_path.exists() {
+        let content = match std::fs::read_to_string(&contacts_path) {
+            Ok(c) => c,
+            Err(e) => {
+                eprintln!("Erreur lecture contacts.json: {}", e);
+                return;
+            }
+        };
+        match serde_json::from_str(&content) {
+            Ok(c) => c,
+            Err(e) => {
+                eprintln!("Erreur: contacts.json corrompu: {}", e);
+                return;
+            }
+        }
+    } else {
+        vec![]
+    };
+
+    // S'abonner aux GiftWrap pour notre pubkey
+    let subscription = Filter::new()
+        .kind(Kind::GiftWrap)
+        .pubkey(identity.public_key());
+
+    if let Err(e) = client.subscribe(subscription, None).await {
+        eprintln!("Erreur abonnement: {}", e);
+        return;
+    }
+
+    println!("Appuyez sur Ctrl+C pour arrêter.");
+
+    if let Err(e) = client
+        .handle_notifications(|notification| async {
+            if let RelayPoolNotification::Event { event, .. } = notification {
+                if event.kind == Kind::GiftWrap {
+                    match MessageService::new().receive(&client, &event).await {
+                        Ok(UnwrappedGift { rumor, sender }) => {
+                            if rumor.kind == Kind::PrivateDirectMessage {
+                                let sender_npub =
+                                    sender.to_bech32().unwrap_or_else(|_| sender.to_string());
+                                let sender_name = contacts
+                                    .iter()
+                                    .find(|c| c["npub"] == sender_npub)
+                                    .and_then(|c| c["name"].as_str())
+                                    .unwrap_or(&sender_npub);
+                                println!("📨 {}: {}", sender_name, rumor.content);
+                            }
+                        }
+                        Err(e) => eprintln!("⚠️  Erreur déchiffrement: {}", e),
+                    }
+                }
+            }
+            Ok(false)
+        })
+        .await
+    {
+        eprintln!("Erreur notification loop: {}", e);
+    }
 }
 
 async fn cmd_restore(phrase: &str) {
     match Identity::from_seed_phrase(phrase, "") {
         Ok(identity) => {
-            let data_dir = rr_core::identity::IdentityManager::default_data_dir();
-            let manager = rr_core::identity::IdentityManager::new(&data_dir);
+            let manager = rr_core::identity::IdentityManager::new(data_dir());
             if let Err(e) = manager.save(&identity) {
                 eprintln!("Erreur sauvegarde: {}", e);
                 return;

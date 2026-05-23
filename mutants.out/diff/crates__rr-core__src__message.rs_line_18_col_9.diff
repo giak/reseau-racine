@@ -1,0 +1,24 @@
+--- crates/rr-core/src/message.rs
++++ replace MessageService::send -> Result<EventId, Box<dyn std::error::Error>> with Ok(Default::default())
+@@ -10,20 +10,17 @@
+     }
+ 
+     pub async fn send(
+         &self,
+         client: &Client,
+         receiver_pubkey: PublicKey,
+         content: &str,
+     ) -> Result<EventId, Box<dyn std::error::Error>> {
+-        let output = client
+-            .send_private_msg(receiver_pubkey, content, vec![])
+-            .await?;
+-        Ok(*output)
++        Ok(Default::default()) /* ~ changed by cargo-mutants ~ */
+     }
+ 
+     pub async fn receive(
+         &self,
+         client: &Client,
+         gift_wrap: &Event,
+     ) -> Result<UnwrappedGift, Box<dyn std::error::Error>> {
+         let unwrapped = client.unwrap_gift_wrap(gift_wrap).await?;

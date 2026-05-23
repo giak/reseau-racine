@@ -1,0 +1,23 @@
+--- crates/rr-core/src/identity.rs
++++ replace <impl fmt::Debug for Identity>::fmt -> fmt::Result with Ok(Default::default())
+@@ -9,19 +9,17 @@
+ use std::str::FromStr;
+ 
+ pub struct Identity {
+     keys: Keys,
+ }
+ 
+ impl fmt::Debug for Identity {
+     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+-        f.debug_struct("Identity")
+-            .field("npub", &self.public_key_bech32())
+-            .finish()
++        Ok(Default::default()) /* ~ changed by cargo-mutants ~ */
+     }
+ }
+ 
+ impl Identity {
+     pub fn new() -> Self {
+         Self {
+             keys: Keys::generate(),
+         }

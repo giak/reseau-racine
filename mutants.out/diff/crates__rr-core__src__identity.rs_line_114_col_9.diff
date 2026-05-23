@@ -1,0 +1,25 @@
+--- crates/rr-core/src/identity.rs
++++ replace IdentityManager::load -> Result<Identity, Box<dyn std::error::Error>> with Ok(Default::default())
+@@ -106,21 +106,17 @@
+         } else {
+             let identity = Identity::new();
+             self.save(&identity)?;
+             Ok(identity)
+         }
+     }
+ 
+     pub fn load(&self) -> Result<Identity, Box<dyn std::error::Error>> {
+-        let key_path = self.data_dir.join("keys.json");
+-        let content = std::fs::read_to_string(&key_path)?;
+-        let data: serde_json::Value = serde_json::from_str(&content)?;
+-        let nsec = data["nsec"].as_str().ok_or("missing nsec field")?;
+-        Identity::from_nsec(nsec)
++        Ok(Default::default()) /* ~ changed by cargo-mutants ~ */
+     }
+ 
+     pub fn save(&self, identity: &Identity) -> Result<(), Box<dyn std::error::Error>> {
+         std::fs::create_dir_all(&self.data_dir)?;
+         let key_path = self.data_dir.join("keys.json");
+         let data = serde_json::json!({
+             "npub": identity.public_key_bech32(),
+             "nsec": identity.secret_key_bech32(),

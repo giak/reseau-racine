@@ -1,0 +1,22 @@
+--- crates/rr-core/src/transport/nostr.rs
++++ replace NostrTransport::with_keys -> Result<Self, Box<dyn std::error::Error>> with Ok(Default::default())
+@@ -13,18 +13,15 @@
+         client.connect().await;
+         Ok(Self { client })
+     }
+ 
+     pub async fn with_keys(
+         relay_url: &str,
+         keys: Keys,
+     ) -> Result<Self, Box<dyn std::error::Error>> {
+-        let client = Client::new(keys);
+-        client.add_relay(relay_url).await?;
+-        client.connect().await;
+-        Ok(Self { client })
++        Ok(Default::default()) /* ~ changed by cargo-mutants ~ */
+     }
+ 
+     pub fn client(&self) -> &Client {
+         &self.client
+     }
+ }

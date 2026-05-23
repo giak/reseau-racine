@@ -1,0 +1,6 @@
+crates/rr-core/src/crypto.rs:25:9: replace CryptoProvider::generate_keys -> Keys with Default::default()
+crates/rr-core/src/identity.rs:55:9: replace Identity::keys -> &Keys with Box::leak(Box::new(Default::default()))
+crates/rr-core/src/identity.rs:59:9: replace Identity::public_key -> PublicKey with Default::default()
+crates/rr-core/src/message.rs:18:9: replace MessageService::send -> Result<EventId, Box<dyn std::error::Error>> with Ok(Default::default())
+crates/rr-core/src/message.rs:29:9: replace MessageService::receive -> Result<UnwrappedGift, Box<dyn std::error::Error>> with Ok(Default::default())
+crates/rr-core/src/transport/nostr.rs:21:9: replace NostrTransport::with_keys -> Result<Self, Box<dyn std::error::Error>> with Ok(Default::default())

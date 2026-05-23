@@ -1,0 +1,898 @@
+[
+  {
+    "diff": "--- crates/rr-core/src/crypto.rs\n+++ replace CryptoProvider::encrypt -> Result<String, nip44::Error> with Ok(String::new())\n@@ -5,17 +5,17 @@\n pub struct CryptoProvider;\n \n impl CryptoProvider {\n     pub fn encrypt(\n         secret_key: &SecretKey,\n         public_key: &PublicKey,\n         content: &str,\n     ) -> Result<String, nip44::Error> {\n-        nip44::encrypt(secret_key, public_key, content, nip44::Version::V2)\n+        Ok(String::new()) /* ~ changed by cargo-mutants ~ */\n     }\n \n     pub fn decrypt(\n         secret_key: &SecretKey,\n         public_key: &PublicKey,\n         payload: &str,\n     ) -> Result<String, nip44::Error> {\n         nip44::decrypt(secret_key, public_key, payload)\n",
+    "file": "crates/rr-core/src/crypto.rs",
+    "function": {
+      "function_name": "CryptoProvider::encrypt",
+      "return_type": "-> Result<String, nip44::Error>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 14
+        },
+        "start": {
+          "column": 5,
+          "line": 8
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "crates/rr-core/src/crypto.rs:13:9: replace CryptoProvider::encrypt -> Result<String, nip44::Error> with Ok(String::new())",
+    "package": "rr-core",
+    "replacement": "Ok(String::new())",
+    "span": {
+      "end": {
+        "column": 76,
+        "line": 13
+      },
+      "start": {
+        "column": 9,
+        "line": 13
+      }
+    }
+  },
+  {
+    "diff": "--- crates/rr-core/src/crypto.rs\n+++ replace CryptoProvider::encrypt -> Result<String, nip44::Error> with Ok(\"xyzzy\".into())\n@@ -5,17 +5,17 @@\n pub struct CryptoProvider;\n \n impl CryptoProvider {\n     pub fn encrypt(\n         secret_key: &SecretKey,\n         public_key: &PublicKey,\n         content: &str,\n     ) -> Result<String, nip44::Error> {\n-        nip44::encrypt(secret_key, public_key, content, nip44::Version::V2)\n+        Ok(\"xyzzy\".into()) /* ~ changed by cargo-mutants ~ */\n     }\n \n     pub fn decrypt(\n         secret_key: &SecretKey,\n         public_key: &PublicKey,\n         payload: &str,\n     ) -> Result<String, nip44::Error> {\n         nip44::decrypt(secret_key, public_key, payload)\n",
+    "file": "crates/rr-core/src/crypto.rs",
+    "function": {
+      "function_name": "CryptoProvider::encrypt",
+      "return_type": "-> Result<String, nip44::Error>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 14
+        },
+        "start": {
+          "column": 5,
+          "line": 8
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "crates/rr-core/src/crypto.rs:13:9: replace CryptoProvider::encrypt -> Result<String, nip44::Error> with Ok(\"xyzzy\".into())",
+    "package": "rr-core",
+    "replacement": "Ok(\"xyzzy\".into())",
+    "span": {
+      "end": {
+        "column": 76,
+        "line": 13
+      },
+      "start": {
+        "column": 9,
+        "line": 13
+      }
+    }
+  },
+  {
+    "diff": "--- crates/rr-core/src/crypto.rs\n+++ replace CryptoProvider::decrypt -> Result<String, nip44::Error> with Ok(String::new())\n@@ -13,17 +13,17 @@\n         nip44::encrypt(secret_key, public_key, content, nip44::Version::V2)\n     }\n \n     pub fn decrypt(\n         secret_key: &SecretKey,\n         public_key: &PublicKey,\n         payload: &str,\n     ) -> Result<String, nip44::Error> {\n-        nip44::decrypt(secret_key, public_key, payload)\n+        Ok(String::new()) /* ~ changed by cargo-mutants ~ */\n     }\n \n     pub fn generate_keys() -> Keys {\n         Keys::generate()\n     }\n }\n \n #[cfg(test)]\n",
+    "file": "crates/rr-core/src/crypto.rs",
+    "function": {
+      "function_name": "CryptoProvider::decrypt",
+      "return_type": "-> Result<String, nip44::Error>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 22
+        },
+        "start": {
+          "column": 5,
+          "line": 16
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "crates/rr-core/src/crypto.rs:21:9: replace CryptoProvider::decrypt -> Result<String, nip44::Error> with Ok(String::new())",
+    "package": "rr-core",
+    "replacement": "Ok(String::new())",
+    "span": {
+      "end": {
+        "column": 56,
+        "line": 21
+      },
+      "start": {
+        "column": 9,
+        "line": 21
+      }
+    }
+  },
+  {
+    "diff": "--- crates/rr-core/src/crypto.rs\n+++ replace CryptoProvider::decrypt -> Result<String, nip44::Error> with Ok(\"xyzzy\".into())\n@@ -13,17 +13,17 @@\n         nip44::encrypt(secret_key, public_key, content, nip44::Version::V2)\n     }\n \n     pub fn decrypt(\n         secret_key: &SecretKey,\n         public_key: &PublicKey,\n         payload: &str,\n     ) -> Result<String, nip44::Error> {\n-        nip44::decrypt(secret_key, public_key, payload)\n+        Ok(\"xyzzy\".into()) /* ~ changed by cargo-mutants ~ */\n     }\n \n     pub fn generate_keys() -> Keys {\n         Keys::generate()\n     }\n }\n \n #[cfg(test)]\n",
+    "file": "crates/rr-core/src/crypto.rs",
+    "function": {
+      "function_name": "CryptoProvider::decrypt",
+      "return_type": "-> Result<String, nip44::Error>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 22
+        },
+        "start": {
+          "column": 5,
+          "line": 16
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "crates/rr-core/src/crypto.rs:21:9: replace CryptoProvider::decrypt -> Result<String, nip44::Error> with Ok(\"xyzzy\".into())",
+    "package": "rr-core",
+    "replacement": "Ok(\"xyzzy\".into())",
+    "span": {
+      "end": {
+        "column": 56,
+        "line": 21
+      },
+      "start": {
+        "column": 9,
+        "line": 21
+      }
+    }
+  },
+  {
+    "diff": "--- crates/rr-core/src/crypto.rs\n+++ replace CryptoProvider::generate_keys -> Keys with Default::default()\n@@ -17,17 +17,17 @@\n         secret_key: &SecretKey,\n         public_key: &PublicKey,\n         payload: &str,\n     ) -> Result<String, nip44::Error> {\n         nip44::decrypt(secret_key, public_key, payload)\n     }\n \n     pub fn generate_keys() -> Keys {\n-        Keys::generate()\n+        Default::default() /* ~ changed by cargo-mutants ~ */\n     }\n }\n \n #[cfg(test)]\n mod tests {\n     use super::*;\n \n     fn alice_bob() -> (Keys, Keys) {\n",
+    "file": "crates/rr-core/src/crypto.rs",
+    "function": {
+      "function_name": "CryptoProvider::generate_keys",
+      "return_type": "-> Keys",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 26
+        },
+        "start": {
+          "column": 5,
+          "line": 24
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "crates/rr-core/src/crypto.rs:25:9: replace CryptoProvider::generate_keys -> Keys with Default::default()",
+    "package": "rr-core",
+    "replacement": "Default::default()",
+    "span": {
+      "end": {
+        "column": 25,
+        "line": 25
+      },
+      "start": {
+        "column": 9,
+        "line": 25
+      }
+    }
+  },
+  {
+    "diff": "--- crates/rr-core/src/identity.rs\n+++ replace <impl fmt::Debug for Identity>::fmt -> fmt::Result with Ok(Default::default())\n@@ -9,19 +9,17 @@\n use std::str::FromStr;\n \n pub struct Identity {\n     keys: Keys,\n }\n \n impl fmt::Debug for Identity {\n     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {\n-        f.debug_struct(\"Identity\")\n-            .field(\"npub\", &self.public_key_bech32())\n-            .finish()\n+        Ok(Default::default()) /* ~ changed by cargo-mutants ~ */\n     }\n }\n \n impl Identity {\n     pub fn new() -> Self {\n         Self {\n             keys: Keys::generate(),\n         }\n",
+    "file": "crates/rr-core/src/identity.rs",
+    "function": {
+      "function_name": "<impl fmt::Debug for Identity>::fmt",
+      "return_type": "-> fmt::Result",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 20
+        },
+        "start": {
+          "column": 5,
+          "line": 16
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "crates/rr-core/src/identity.rs:17:9: replace <impl fmt::Debug for Identity>::fmt -> fmt::Result with Ok(Default::default())",
+    "package": "rr-core",
+    "replacement": "Ok(Default::default())",
+    "span": {
+      "end": {
+        "column": 22,
+        "line": 19
+      },
+      "start": {
+        "column": 9,
+        "line": 17
+      }
+    }
+  },
+  {
+    "diff": "--- crates/rr-core/src/identity.rs\n+++ replace Identity::from_secret_key -> Self with Default::default()\n@@ -23,19 +23,17 @@\n impl Identity {\n     pub fn new() -> Self {\n         Self {\n             keys: Keys::generate(),\n         }\n     }\n \n     pub fn from_secret_key(secret_key: &SecretKey) -> Self {\n-        Self {\n-            keys: Keys::new(secret_key.clone()),\n-        }\n+        Default::default() /* ~ changed by cargo-mutants ~ */\n     }\n \n     pub fn from_seed_phrase(mnemonic_str: &str, passphrase: &str) -> Result<Self, nip06::Error> {\n         let _mnemonic = Mnemonic::from_str(mnemonic_str).map_err(nip06::Error::BIP39)?;\n         let keys = Keys::from_mnemonic(mnemonic_str, Some(passphrase))?;\n         Ok(Self { keys })\n     }\n \n",
+    "file": "crates/rr-core/src/identity.rs",
+    "function": {
+      "function_name": "Identity::from_secret_key",
+      "return_type": "-> Self",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 34
+        },
+        "start": {
+          "column": 5,
+          "line": 30
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "crates/rr-core/src/identity.rs:31:9: replace Identity::from_secret_key -> Self with Default::default()",
+    "package": "rr-core",
+    "replacement": "Default::default()",
+    "span": {
+      "end": {
+        "column": 10,
+        "line": 33
+      },
+      "start": {
+        "column": 9,
+        "line": 31
+      }
+    }
+  },
+  {
+    "diff": "--- crates/rr-core/src/identity.rs\n+++ replace Identity::from_seed_phrase -> Result<Self, nip06::Error> with Ok(Default::default())\n@@ -29,19 +29,17 @@\n \n     pub fn from_secret_key(secret_key: &SecretKey) -> Self {\n         Self {\n             keys: Keys::new(secret_key.clone()),\n         }\n     }\n \n     pub fn from_seed_phrase(mnemonic_str: &str, passphrase: &str) -> Result<Self, nip06::Error> {\n-        let _mnemonic = Mnemonic::from_str(mnemonic_str).map_err(nip06::Error::BIP39)?;\n-        let keys = Keys::from_mnemonic(mnemonic_str, Some(passphrase))?;\n-        Ok(Self { keys })\n+        Ok(Default::default()) /* ~ changed by cargo-mutants ~ */\n     }\n \n     pub fn from_nsec(nsec: &str) -> Result<Self, Box<dyn std::error::Error>> {\n         let secret_key = SecretKey::from_bech32(nsec)?;\n         Ok(Self {\n             keys: Keys::new(secret_key),\n         })\n     }\n",
+    "file": "crates/rr-core/src/identity.rs",
+    "function": {
+      "function_name": "Identity::from_seed_phrase",
+      "return_type": "-> Result<Self, nip06::Error>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 40
+        },
+        "start": {
+          "column": 5,
+          "line": 36
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "crates/rr-core/src/identity.rs:37:9: replace Identity::from_seed_phrase -> Result<Self, nip06::Error> with Ok(Default::default())",
+    "package": "rr-core",
+    "replacement": "Ok(Default::default())",
+    "span": {
+      "end": {
+        "column": 26,
+        "line": 39
+      },
+      "start": {
+        "column": 9,
+        "line": 37
+      }
+    }
+  },
+  {
+    "diff": "--- crates/rr-core/src/identity.rs\n+++ replace Identity::from_nsec -> Result<Self, Box<dyn std::error::Error>> with Ok(Default::default())\n@@ -35,20 +35,17 @@\n \n     pub fn from_seed_phrase(mnemonic_str: &str, passphrase: &str) -> Result<Self, nip06::Error> {\n         let _mnemonic = Mnemonic::from_str(mnemonic_str).map_err(nip06::Error::BIP39)?;\n         let keys = Keys::from_mnemonic(mnemonic_str, Some(passphrase))?;\n         Ok(Self { keys })\n     }\n \n     pub fn from_nsec(nsec: &str) -> Result<Self, Box<dyn std::error::Error>> {\n-        let secret_key = SecretKey::from_bech32(nsec)?;\n-        Ok(Self {\n-            keys: Keys::new(secret_key),\n-        })\n+        Ok(Default::default()) /* ~ changed by cargo-mutants ~ */\n     }\n \n     pub fn generate_seed_phrase() -> Result<String, Box<dyn std::error::Error>> {\n         let mnemonic = Mnemonic::generate(12)?;\n         Ok(mnemonic.to_string())\n     }\n \n     pub fn keys(&self) -> &Keys {\n",
+    "file": "crates/rr-core/src/identity.rs",
+    "function": {
+      "function_name": "Identity::from_nsec",
+      "return_type": "-> Result<Self, Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 47
+        },
+        "start": {
+          "column": 5,
+          "line": 42
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "crates/rr-core/src/identity.rs:43:9: replace Identity::from_nsec -> Result<Self, Box<dyn std::error::Error>> with Ok(Default::default())",
+    "package": "rr-core",
+    "replacement": "Ok(Default::default())",
+    "span": {
+      "end": {
+        "column": 11,
+        "line": 46
+      },
+      "start": {
+        "column": 9,
+        "line": 43
+      }
+    }
+  },
+  {
+    "diff": "--- crates/rr-core/src/identity.rs\n+++ replace Identity::generate_seed_phrase -> Result<String, Box<dyn std::error::Error>> with Ok(String::new())\n@@ -42,18 +42,17 @@\n     pub fn from_nsec(nsec: &str) -> Result<Self, Box<dyn std::error::Error>> {\n         let secret_key = SecretKey::from_bech32(nsec)?;\n         Ok(Self {\n             keys: Keys::new(secret_key),\n         })\n     }\n \n     pub fn generate_seed_phrase() -> Result<String, Box<dyn std::error::Error>> {\n-        let mnemonic = Mnemonic::generate(12)?;\n-        Ok(mnemonic.to_string())\n+        Ok(String::new()) /* ~ changed by cargo-mutants ~ */\n     }\n \n     pub fn keys(&self) -> &Keys {\n         &self.keys\n     }\n \n     pub fn public_key(&self) -> PublicKey {\n         self.keys.public_key()\n",
+    "file": "crates/rr-core/src/identity.rs",
+    "function": {
+      "function_name": "Identity::generate_seed_phrase",
+      "return_type": "-> Result<String, Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 52
+        },
+        "start": {
+          "column": 5,
+          "line": 49
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "crates/rr-core/src/identity.rs:50:9: replace Identity::generate_seed_phrase -> Result<String, Box<dyn std::error::Error>> with Ok(String::new())",
+    "package": "rr-core",
+    "replacement": "Ok(String::new())",
+    "span": {
+      "end": {
+        "column": 33,
+        "line": 51
+      },
+      "start": {
+        "column": 9,
+        "line": 50
+      }
+    }
+  },
+  {
+    "diff": "--- crates/rr-core/src/identity.rs\n+++ replace Identity::generate_seed_phrase -> Result<String, Box<dyn std::error::Error>> with Ok(\"xyzzy\".into())\n@@ -42,18 +42,17 @@\n     pub fn from_nsec(nsec: &str) -> Result<Self, Box<dyn std::error::Error>> {\n         let secret_key = SecretKey::from_bech32(nsec)?;\n         Ok(Self {\n             keys: Keys::new(secret_key),\n         })\n     }\n \n     pub fn generate_seed_phrase() -> Result<String, Box<dyn std::error::Error>> {\n-        let mnemonic = Mnemonic::generate(12)?;\n-        Ok(mnemonic.to_string())\n+        Ok(\"xyzzy\".into()) /* ~ changed by cargo-mutants ~ */\n     }\n \n     pub fn keys(&self) -> &Keys {\n         &self.keys\n     }\n \n     pub fn public_key(&self) -> PublicKey {\n         self.keys.public_key()\n",
+    "file": "crates/rr-core/src/identity.rs",
+    "function": {
+      "function_name": "Identity::generate_seed_phrase",
+      "return_type": "-> Result<String, Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 52
+        },
+        "start": {
+          "column": 5,
+          "line": 49
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "crates/rr-core/src/identity.rs:50:9: replace Identity::generate_seed_phrase -> Result<String, Box<dyn std::error::Error>> with Ok(\"xyzzy\".into())",
+    "package": "rr-core",
+    "replacement": "Ok(\"xyzzy\".into())",
+    "span": {
+      "end": {
+        "column": 33,
+        "line": 51
+      },
+      "start": {
+        "column": 9,
+        "line": 50
+      }
+    }
+  },
+  {
+    "diff": "--- crates/rr-core/src/identity.rs\n+++ replace Identity::keys -> &Keys with Box::leak(Box::new(Default::default()))\n@@ -47,17 +47,17 @@\n     }\n \n     pub fn generate_seed_phrase() -> Result<String, Box<dyn std::error::Error>> {\n         let mnemonic = Mnemonic::generate(12)?;\n         Ok(mnemonic.to_string())\n     }\n \n     pub fn keys(&self) -> &Keys {\n-        &self.keys\n+        Box::leak(Box::new(Default::default())) /* ~ changed by cargo-mutants ~ */\n     }\n \n     pub fn public_key(&self) -> PublicKey {\n         self.keys.public_key()\n     }\n \n     pub fn public_key_bech32(&self) -> String {\n         self.keys\n",
+    "file": "crates/rr-core/src/identity.rs",
+    "function": {
+      "function_name": "Identity::keys",
+      "return_type": "-> &Keys",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 56
+        },
+        "start": {
+          "column": 5,
+          "line": 54
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "crates/rr-core/src/identity.rs:55:9: replace Identity::keys -> &Keys with Box::leak(Box::new(Default::default()))",
+    "package": "rr-core",
+    "replacement": "Box::leak(Box::new(Default::default()))",
+    "span": {
+      "end": {
+        "column": 19,
+        "line": 55
+      },
+      "start": {
+        "column": 9,
+        "line": 55
+      }
+    }
+  },
+  {
+    "diff": "--- crates/rr-core/src/identity.rs\n+++ replace Identity::public_key -> PublicKey with Default::default()\n@@ -51,17 +51,17 @@\n         Ok(mnemonic.to_string())\n     }\n \n     pub fn keys(&self) -> &Keys {\n         &self.keys\n     }\n \n     pub fn public_key(&self) -> PublicKey {\n-        self.keys.public_key()\n+        Default::default() /* ~ changed by cargo-mutants ~ */\n     }\n \n     pub fn public_key_bech32(&self) -> String {\n         self.keys\n             .public_key()\n             .to_bech32()\n             .expect(\"valid public key always encodes to bech32\")\n     }\n",
+    "file": "crates/rr-core/src/identity.rs",
+    "function": {
+      "function_name": "Identity::public_key",
+      "return_type": "-> PublicKey",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 60
+        },
+        "start": {
+          "column": 5,
+          "line": 58
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "crates/rr-core/src/identity.rs:59:9: replace Identity::public_key -> PublicKey with Default::default()",
+    "package": "rr-core",
+    "replacement": "Default::default()",
+    "span": {
+      "end": {
+        "column": 31,
+        "line": 59
+      },
+      "start": {
+        "column": 9,
+        "line": 59
+      }
+    }
+  },
+  {
+    "diff": "--- crates/rr-core/src/identity.rs\n+++ replace Identity::public_key_bech32 -> String with String::new()\n@@ -55,20 +55,17 @@\n         &self.keys\n     }\n \n     pub fn public_key(&self) -> PublicKey {\n         self.keys.public_key()\n     }\n \n     pub fn public_key_bech32(&self) -> String {\n-        self.keys\n-            .public_key()\n-            .to_bech32()\n-            .expect(\"valid public key always encodes to bech32\")\n+        String::new() /* ~ changed by cargo-mutants ~ */\n     }\n \n     pub fn secret_key_bech32(&self) -> String {\n         self.keys\n             .secret_key()\n             .to_bech32()\n             .expect(\"valid secret key always encodes to bech32\")\n     }\n",
+    "file": "crates/rr-core/src/identity.rs",
+    "function": {
+      "function_name": "Identity::public_key_bech32",
+      "return_type": "-> String",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 67
+        },
+        "start": {
+          "column": 5,
+          "line": 62
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "crates/rr-core/src/identity.rs:63:9: replace Identity::public_key_bech32 -> String with String::new()",
+    "package": "rr-core",
+    "replacement": "String::new()",
+    "span": {
+      "end": {
+        "column": 65,
+        "line": 66
+      },
+      "start": {
+        "column": 9,
+        "line": 63
+      }
+    }
+  },
+  {
+    "diff": "--- crates/rr-core/src/identity.rs\n+++ replace Identity::public_key_bech32 -> String with \"xyzzy\".into()\n@@ -55,20 +55,17 @@\n         &self.keys\n     }\n \n     pub fn public_key(&self) -> PublicKey {\n         self.keys.public_key()\n     }\n \n     pub fn public_key_bech32(&self) -> String {\n-        self.keys\n-            .public_key()\n-            .to_bech32()\n-            .expect(\"valid public key always encodes to bech32\")\n+        \"xyzzy\".into() /* ~ changed by cargo-mutants ~ */\n     }\n \n     pub fn secret_key_bech32(&self) -> String {\n         self.keys\n             .secret_key()\n             .to_bech32()\n             .expect(\"valid secret key always encodes to bech32\")\n     }\n",
+    "file": "crates/rr-core/src/identity.rs",
+    "function": {
+      "function_name": "Identity::public_key_bech32",
+      "return_type": "-> String",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 67
+        },
+        "start": {
+          "column": 5,
+          "line": 62
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "crates/rr-core/src/identity.rs:63:9: replace Identity::public_key_bech32 -> String with \"xyzzy\".into()",
+    "package": "rr-core",
+    "replacement": "\"xyzzy\".into()",
+    "span": {
+      "end": {
+        "column": 65,
+        "line": 66
+      },
+      "start": {
+        "column": 9,
+        "line": 63
+      }
+    }
+  },
+  {
+    "diff": "--- crates/rr-core/src/identity.rs\n+++ replace Identity::secret_key_bech32 -> String with String::new()\n@@ -62,20 +62,17 @@\n     pub fn public_key_bech32(&self) -> String {\n         self.keys\n             .public_key()\n             .to_bech32()\n             .expect(\"valid public key always encodes to bech32\")\n     }\n \n     pub fn secret_key_bech32(&self) -> String {\n-        self.keys\n-            .secret_key()\n-            .to_bech32()\n-            .expect(\"valid secret key always encodes to bech32\")\n+        String::new() /* ~ changed by cargo-mutants ~ */\n     }\n }\n \n impl Default for Identity {\n     fn default() -> Self {\n         Self::new()\n     }\n }\n",
+    "file": "crates/rr-core/src/identity.rs",
+    "function": {
+      "function_name": "Identity::secret_key_bech32",
+      "return_type": "-> String",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 74
+        },
+        "start": {
+          "column": 5,
+          "line": 69
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "crates/rr-core/src/identity.rs:70:9: replace Identity::secret_key_bech32 -> String with String::new()",
+    "package": "rr-core",
+    "replacement": "String::new()",
+    "span": {
+      "end": {
+        "column": 65,
+        "line": 73
+      },
+      "start": {
+        "column": 9,
+        "line": 70
+      }
+    }
+  },
+  {
+    "diff": "--- crates/rr-core/src/identity.rs\n+++ replace Identity::secret_key_bech32 -> String with \"xyzzy\".into()\n@@ -62,20 +62,17 @@\n     pub fn public_key_bech32(&self) -> String {\n         self.keys\n             .public_key()\n             .to_bech32()\n             .expect(\"valid public key always encodes to bech32\")\n     }\n \n     pub fn secret_key_bech32(&self) -> String {\n-        self.keys\n-            .secret_key()\n-            .to_bech32()\n-            .expect(\"valid secret key always encodes to bech32\")\n+        \"xyzzy\".into() /* ~ changed by cargo-mutants ~ */\n     }\n }\n \n impl Default for Identity {\n     fn default() -> Self {\n         Self::new()\n     }\n }\n",
+    "file": "crates/rr-core/src/identity.rs",
+    "function": {
+      "function_name": "Identity::secret_key_bech32",
+      "return_type": "-> String",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 74
+        },
+        "start": {
+          "column": 5,
+          "line": 69
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "crates/rr-core/src/identity.rs:70:9: replace Identity::secret_key_bech32 -> String with \"xyzzy\".into()",
+    "package": "rr-core",
+    "replacement": "\"xyzzy\".into()",
+    "span": {
+      "end": {
+        "column": 65,
+        "line": 73
+      },
+      "start": {
+        "column": 9,
+        "line": 70
+      }
+    }
+  },
+  {
+    "diff": "--- crates/rr-core/src/identity.rs\n+++ replace IdentityManager::default_data_dir -> PathBuf with Default::default()\n@@ -88,20 +88,17 @@\n impl IdentityManager {\n     pub fn new(data_dir: impl Into<PathBuf>) -> Self {\n         Self {\n             data_dir: data_dir.into(),\n         }\n     }\n \n     pub fn default_data_dir() -> PathBuf {\n-        let home = std::env::var(\"HOME\")\n-            .or_else(|_| std::env::var(\"USERPROFILE\"))\n-            .unwrap_or_else(|_| \".\".to_string());\n-        PathBuf::from(home).join(\".rr\")\n+        Default::default() /* ~ changed by cargo-mutants ~ */\n     }\n \n     pub fn load_or_create(&self) -> Result<Identity, Box<dyn std::error::Error>> {\n         let key_path = self.data_dir.join(\"keys.json\");\n         if key_path.exists() {\n             self.load()\n         } else {\n             let identity = Identity::new();\n",
+    "file": "crates/rr-core/src/identity.rs",
+    "function": {
+      "function_name": "IdentityManager::default_data_dir",
+      "return_type": "-> PathBuf",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 100
+        },
+        "start": {
+          "column": 5,
+          "line": 95
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "crates/rr-core/src/identity.rs:96:9: replace IdentityManager::default_data_dir -> PathBuf with Default::default()",
+    "package": "rr-core",
+    "replacement": "Default::default()",
+    "span": {
+      "end": {
+        "column": 40,
+        "line": 99
+      },
+      "start": {
+        "column": 9,
+        "line": 96
+      }
+    }
+  },
+  {
+    "diff": "--- crates/rr-core/src/identity.rs\n+++ replace IdentityManager::load_or_create -> Result<Identity, Box<dyn std::error::Error>> with Ok(Default::default())\n@@ -95,24 +95,17 @@\n     pub fn default_data_dir() -> PathBuf {\n         let home = std::env::var(\"HOME\")\n             .or_else(|_| std::env::var(\"USERPROFILE\"))\n             .unwrap_or_else(|_| \".\".to_string());\n         PathBuf::from(home).join(\".rr\")\n     }\n \n     pub fn load_or_create(&self) -> Result<Identity, Box<dyn std::error::Error>> {\n-        let key_path = self.data_dir.join(\"keys.json\");\n-        if key_path.exists() {\n-            self.load()\n-        } else {\n-            let identity = Identity::new();\n-            self.save(&identity)?;\n-            Ok(identity)\n-        }\n+        Ok(Default::default()) /* ~ changed by cargo-mutants ~ */\n     }\n \n     pub fn load(&self) -> Result<Identity, Box<dyn std::error::Error>> {\n         let key_path = self.data_dir.join(\"keys.json\");\n         let content = std::fs::read_to_string(&key_path)?;\n         let data: serde_json::Value = serde_json::from_str(&content)?;\n         let nsec = data[\"nsec\"].as_str().ok_or(\"missing nsec field\")?;\n         Identity::from_nsec(nsec)\n",
+    "file": "crates/rr-core/src/identity.rs",
+    "function": {
+      "function_name": "IdentityManager::load_or_create",
+      "return_type": "-> Result<Identity, Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 111
+        },
+        "start": {
+          "column": 5,
+          "line": 102
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "crates/rr-core/src/identity.rs:103:9: replace IdentityManager::load_or_create -> Result<Identity, Box<dyn std::error::Error>> with Ok(Default::default())",
+    "package": "rr-core",
+    "replacement": "Ok(Default::default())",
+    "span": {
+      "end": {
+        "column": 10,
+        "line": 110
+      },
+      "start": {
+        "column": 9,
+        "line": 103
+      }
+    }
+  },
+  {
+    "diff": "--- crates/rr-core/src/identity.rs\n+++ replace IdentityManager::load -> Result<Identity, Box<dyn std::error::Error>> with Ok(Default::default())\n@@ -106,21 +106,17 @@\n         } else {\n             let identity = Identity::new();\n             self.save(&identity)?;\n             Ok(identity)\n         }\n     }\n \n     pub fn load(&self) -> Result<Identity, Box<dyn std::error::Error>> {\n-        let key_path = self.data_dir.join(\"keys.json\");\n-        let content = std::fs::read_to_string(&key_path)?;\n-        let data: serde_json::Value = serde_json::from_str(&content)?;\n-        let nsec = data[\"nsec\"].as_str().ok_or(\"missing nsec field\")?;\n-        Identity::from_nsec(nsec)\n+        Ok(Default::default()) /* ~ changed by cargo-mutants ~ */\n     }\n \n     pub fn save(&self, identity: &Identity) -> Result<(), Box<dyn std::error::Error>> {\n         std::fs::create_dir_all(&self.data_dir)?;\n         let key_path = self.data_dir.join(\"keys.json\");\n         let data = serde_json::json!({\n             \"npub\": identity.public_key_bech32(),\n             \"nsec\": identity.secret_key_bech32(),\n",
+    "file": "crates/rr-core/src/identity.rs",
+    "function": {
+      "function_name": "IdentityManager::load",
+      "return_type": "-> Result<Identity, Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 119
+        },
+        "start": {
+          "column": 5,
+          "line": 113
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "crates/rr-core/src/identity.rs:114:9: replace IdentityManager::load -> Result<Identity, Box<dyn std::error::Error>> with Ok(Default::default())",
+    "package": "rr-core",
+    "replacement": "Ok(Default::default())",
+    "span": {
+      "end": {
+        "column": 34,
+        "line": 118
+      },
+      "start": {
+        "column": 9,
+        "line": 114
+      }
+    }
+  },
+  {
+    "diff": "--- crates/rr-core/src/identity.rs\n+++ replace IdentityManager::save -> Result<(), Box<dyn std::error::Error>> with Ok(())\n@@ -114,30 +114,17 @@\n         let key_path = self.data_dir.join(\"keys.json\");\n         let content = std::fs::read_to_string(&key_path)?;\n         let data: serde_json::Value = serde_json::from_str(&content)?;\n         let nsec = data[\"nsec\"].as_str().ok_or(\"missing nsec field\")?;\n         Identity::from_nsec(nsec)\n     }\n \n     pub fn save(&self, identity: &Identity) -> Result<(), Box<dyn std::error::Error>> {\n-        std::fs::create_dir_all(&self.data_dir)?;\n-        let key_path = self.data_dir.join(\"keys.json\");\n-        let data = serde_json::json!({\n-            \"npub\": identity.public_key_bech32(),\n-            \"nsec\": identity.secret_key_bech32(),\n-        });\n-        let content = serde_json::to_string_pretty(&data)?;\n-        std::fs::write(&key_path, &content)?;\n-        #[cfg(unix)]\n-        {\n-            use std::os::unix::fs::PermissionsExt;\n-            std::fs::set_permissions(&key_path, std::fs::Permissions::from_mode(0o600))?;\n-        }\n-        Ok(())\n+        Ok(()) /* ~ changed by cargo-mutants ~ */\n     }\n }\n \n #[cfg(test)]\n mod tests {\n     use super::*;\n \n     #[test]\n",
+    "file": "crates/rr-core/src/identity.rs",
+    "function": {
+      "function_name": "IdentityManager::save",
+      "return_type": "-> Result<(), Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 136
+        },
+        "start": {
+          "column": 5,
+          "line": 121
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "crates/rr-core/src/identity.rs:122:9: replace IdentityManager::save -> Result<(), Box<dyn std::error::Error>> with Ok(())",
+    "package": "rr-core",
+    "replacement": "Ok(())",
+    "span": {
+      "end": {
+        "column": 15,
+        "line": 135
+      },
+      "start": {
+        "column": 9,
+        "line": 122
+      }
+    }
+  },
+  {
+    "diff": "--- crates/rr-core/src/message.rs\n+++ replace MessageService::send -> Result<EventId, Box<dyn std::error::Error>> with Ok(Default::default())\n@@ -10,20 +10,17 @@\n     }\n \n     pub async fn send(\n         &self,\n         client: &Client,\n         receiver_pubkey: PublicKey,\n         content: &str,\n     ) -> Result<EventId, Box<dyn std::error::Error>> {\n-        let output = client\n-            .send_private_msg(receiver_pubkey, content, vec![])\n-            .await?;\n-        Ok(*output)\n+        Ok(Default::default()) /* ~ changed by cargo-mutants ~ */\n     }\n \n     pub async fn receive(\n         &self,\n         client: &Client,\n         gift_wrap: &Event,\n     ) -> Result<UnwrappedGift, Box<dyn std::error::Error>> {\n         let unwrapped = client.unwrap_gift_wrap(gift_wrap).await?;\n",
+    "file": "crates/rr-core/src/message.rs",
+    "function": {
+      "function_name": "MessageService::send",
+      "return_type": "-> Result<EventId, Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 22
+        },
+        "start": {
+          "column": 5,
+          "line": 12
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "crates/rr-core/src/message.rs:18:9: replace MessageService::send -> Result<EventId, Box<dyn std::error::Error>> with Ok(Default::default())",
+    "package": "rr-core",
+    "replacement": "Ok(Default::default())",
+    "span": {
+      "end": {
+        "column": 20,
+        "line": 21
+      },
+      "start": {
+        "column": 9,
+        "line": 18
+      }
+    }
+  },
+  {
+    "diff": "--- crates/rr-core/src/message.rs\n+++ replace MessageService::receive -> Result<UnwrappedGift, Box<dyn std::error::Error>> with Ok(Default::default())\n@@ -21,18 +21,17 @@\n         Ok(*output)\n     }\n \n     pub async fn receive(\n         &self,\n         client: &Client,\n         gift_wrap: &Event,\n     ) -> Result<UnwrappedGift, Box<dyn std::error::Error>> {\n-        let unwrapped = client.unwrap_gift_wrap(gift_wrap).await?;\n-        Ok(unwrapped)\n+        Ok(Default::default()) /* ~ changed by cargo-mutants ~ */\n     }\n }\n \n impl Default for MessageService {\n     fn default() -> Self {\n         Self::new()\n     }\n }\n",
+    "file": "crates/rr-core/src/message.rs",
+    "function": {
+      "function_name": "MessageService::receive",
+      "return_type": "-> Result<UnwrappedGift, Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 31
+        },
+        "start": {
+          "column": 5,
+          "line": 24
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "crates/rr-core/src/message.rs:29:9: replace MessageService::receive -> Result<UnwrappedGift, Box<dyn std::error::Error>> with Ok(Default::default())",
+    "package": "rr-core",
+    "replacement": "Ok(Default::default())",
+    "span": {
+      "end": {
+        "column": 22,
+        "line": 30
+      },
+      "start": {
+        "column": 9,
+        "line": 29
+      }
+    }
+  },
+  {
+    "diff": "--- crates/rr-core/src/transport/mod.rs\n+++ replace <impl TransportProvider for nostr::NostrTransport>::client -> &Client with Box::leak(Box::new(Default::default()))\n@@ -4,15 +4,15 @@\n \n pub trait TransportProvider: Send + Sync {\n     fn client(&self) -> &Client;\n     fn kind(&self) -> &'static str;\n }\n \n impl TransportProvider for nostr::NostrTransport {\n     fn client(&self) -> &Client {\n-        self.client()\n+        Box::leak(Box::new(Default::default())) /* ~ changed by cargo-mutants ~ */\n     }\n \n     fn kind(&self) -> &'static str {\n         \"nostr\"\n     }\n }\n",
+    "file": "crates/rr-core/src/transport/mod.rs",
+    "function": {
+      "function_name": "<impl TransportProvider for nostr::NostrTransport>::client",
+      "return_type": "-> &Client",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 13
+        },
+        "start": {
+          "column": 5,
+          "line": 11
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "crates/rr-core/src/transport/mod.rs:12:9: replace <impl TransportProvider for nostr::NostrTransport>::client -> &Client with Box::leak(Box::new(Default::default()))",
+    "package": "rr-core",
+    "replacement": "Box::leak(Box::new(Default::default()))",
+    "span": {
+      "end": {
+        "column": 22,
+        "line": 12
+      },
+      "start": {
+        "column": 9,
+        "line": 12
+      }
+    }
+  },
+  {
+    "diff": "--- crates/rr-core/src/transport/mod.rs\n+++ replace <impl TransportProvider for nostr::NostrTransport>::kind -> &'static str with \"\"\n@@ -8,11 +8,11 @@\n }\n \n impl TransportProvider for nostr::NostrTransport {\n     fn client(&self) -> &Client {\n         self.client()\n     }\n \n     fn kind(&self) -> &'static str {\n-        \"nostr\"\n+        \"\" /* ~ changed by cargo-mutants ~ */\n     }\n }\n",
+    "file": "crates/rr-core/src/transport/mod.rs",
+    "function": {
+      "function_name": "<impl TransportProvider for nostr::NostrTransport>::kind",
+      "return_type": "-> &'static str",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 17
+        },
+        "start": {
+          "column": 5,
+          "line": 15
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "crates/rr-core/src/transport/mod.rs:16:9: replace <impl TransportProvider for nostr::NostrTransport>::kind -> &'static str with \"\"",
+    "package": "rr-core",
+    "replacement": "\"\"",
+    "span": {
+      "end": {
+        "column": 16,
+        "line": 16
+      },
+      "start": {
+        "column": 9,
+        "line": 16
+      }
+    }
+  },
+  {
+    "diff": "--- crates/rr-core/src/transport/mod.rs\n+++ replace <impl TransportProvider for nostr::NostrTransport>::kind -> &'static str with \"xyzzy\"\n@@ -8,11 +8,11 @@\n }\n \n impl TransportProvider for nostr::NostrTransport {\n     fn client(&self) -> &Client {\n         self.client()\n     }\n \n     fn kind(&self) -> &'static str {\n-        \"nostr\"\n+        \"xyzzy\" /* ~ changed by cargo-mutants ~ */\n     }\n }\n",
+    "file": "crates/rr-core/src/transport/mod.rs",
+    "function": {
+      "function_name": "<impl TransportProvider for nostr::NostrTransport>::kind",
+      "return_type": "-> &'static str",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 17
+        },
+        "start": {
+          "column": 5,
+          "line": 15
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "crates/rr-core/src/transport/mod.rs:16:9: replace <impl TransportProvider for nostr::NostrTransport>::kind -> &'static str with \"xyzzy\"",
+    "package": "rr-core",
+    "replacement": "\"xyzzy\"",
+    "span": {
+      "end": {
+        "column": 16,
+        "line": 16
+      },
+      "start": {
+        "column": 9,
+        "line": 16
+      }
+    }
+  },
+  {
+    "diff": "--- crates/rr-core/src/transport/nostr.rs\n+++ replace NostrTransport::with_keys -> Result<Self, Box<dyn std::error::Error>> with Ok(Default::default())\n@@ -13,18 +13,15 @@\n         client.connect().await;\n         Ok(Self { client })\n     }\n \n     pub async fn with_keys(\n         relay_url: &str,\n         keys: Keys,\n     ) -> Result<Self, Box<dyn std::error::Error>> {\n-        let client = Client::new(keys);\n-        client.add_relay(relay_url).await?;\n-        client.connect().await;\n-        Ok(Self { client })\n+        Ok(Default::default()) /* ~ changed by cargo-mutants ~ */\n     }\n \n     pub fn client(&self) -> &Client {\n         &self.client\n     }\n }\n",
+    "file": "crates/rr-core/src/transport/nostr.rs",
+    "function": {
+      "function_name": "NostrTransport::with_keys",
+      "return_type": "-> Result<Self, Box<dyn std::error::Error>>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 25
+        },
+        "start": {
+          "column": 5,
+          "line": 17
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "crates/rr-core/src/transport/nostr.rs:21:9: replace NostrTransport::with_keys -> Result<Self, Box<dyn std::error::Error>> with Ok(Default::default())",
+    "package": "rr-core",
+    "replacement": "Ok(Default::default())",
+    "span": {
+      "end": {
+        "column": 28,
+        "line": 24
+      },
+      "start": {
+        "column": 9,
+        "line": 21
+      }
+    }
+  },
+  {
+    "diff": "--- crates/rr-core/src/transport/nostr.rs\n+++ replace NostrTransport::client -> &Client with Box::leak(Box::new(Default::default()))\n@@ -20,11 +20,11 @@\n     ) -> Result<Self, Box<dyn std::error::Error>> {\n         let client = Client::new(keys);\n         client.add_relay(relay_url).await?;\n         client.connect().await;\n         Ok(Self { client })\n     }\n \n     pub fn client(&self) -> &Client {\n-        &self.client\n+        Box::leak(Box::new(Default::default())) /* ~ changed by cargo-mutants ~ */\n     }\n }\n",
+    "file": "crates/rr-core/src/transport/nostr.rs",
+    "function": {
+      "function_name": "NostrTransport::client",
+      "return_type": "-> &Client",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 29
+        },
+        "start": {
+          "column": 5,
+          "line": 27
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "crates/rr-core/src/transport/nostr.rs:28:9: replace NostrTransport::client -> &Client with Box::leak(Box::new(Default::default()))",
+    "package": "rr-core",
+    "replacement": "Box::leak(Box::new(Default::default()))",
+    "span": {
+      "end": {
+        "column": 21,
+        "line": 28
+      },
+      "start": {
+        "column": 9,
+        "line": 28
+      }
+    }
+  }
+]

@@ -18,6 +18,14 @@ impl MessageService {
         let output = client
             .send_private_msg(receiver_pubkey, content, vec![])
             .await?;
+        if output.success.is_empty() {
+            let errors: Vec<String> = output
+                .failed
+                .iter()
+                .map(|(url, err)| format!("{url}: {err}"))
+                .collect();
+            return Err(format!("Échec d'envoi: {}", errors.join("; ")).into());
+        }
         Ok(*output)
     }
 
