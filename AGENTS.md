@@ -108,18 +108,33 @@ make hooks
 ```
 
 ### Commands
+
+`rtk` est un alias pour `git`/`gh` (git wrapper local, pas un outil externe). Utiliser `rtk` pour toutes les opérations git/gh.
+
 ```bash
 # Nouvelle branche
-git checkout -b feature/<scope>-<description>
+rtk git checkout -b feature/<scope>-<description>
 
-# PR (CLI)
-gh pr create --fill
+# Status, diff
+rtk git status
+rtk git diff
 
-# After review + CI green
-gh pr merge --squash
+# Add + commit (commit via pre-commit hook)
+rtk git add <files>
+rtk git commit -m "<message>"
 
-# Solo dev fast-track (bypass review, bypassable par `giak` dans Ruleset)
-gh pr merge --squash --admin
+# Push
+rtk git push -u origin <branch>
+
+# Gérer les worktrees
+rtk git worktree list
+
+# PR
+rtk gh pr create --fill
+# Après CI green
+rtk gh pr merge --squash
+# Solo dev fast-track (admin bypass)
+rtk gh pr merge --squash --admin
 ```
 
 ## Superpowers Workflow
@@ -165,5 +180,24 @@ All Rust commands run inside the dev container via `./scripts/dev.sh`.
 ## Services (nostr-relay)
 ```bash
 docker compose -f .devcontainer/compose.yaml {logs -f,restart} nostr-relay
+```
+
+## Context Mode (ctx-mode)
+
+Pour l'exécution de code/requêtes sans pollution du contexte agent :
+
+```bash
+# Exécuter du code (output dans sandbox, seulement le résumé dans le contexte)
+ctx_execute(language="javascript", code="...")
+ctx_execute(language="shell", code="...")
+
+# Batch execute + search combiné
+ctx_batch_execute(commands=[...], queries=[...])
+
+# Rechercher dans du contenu indexé
+ctx_search(queries=[...])
+
+# Lire un fichier sans le charger dans le contexte
+ctx_execute_file(path="...", language="javascript", code="process(FILE_CONTENT)...")
 ```
 
