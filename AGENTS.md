@@ -132,10 +132,10 @@ Pour toute tâche de dev, l'agent utilise les skills superpowers dans cet ordre 
 | **Plan** | writing-plans | Avec un design approuvé. Découpe en tâches de 2-5min avec fichiers exacts et vérifications |
 | **Implémentation** | subagent-driven-development ou executing-plans | Subagents parallèles avec review 2-stage (spec → code quality) ou par lots avec checkpoints |
 | **Tests** | test-driven-development | RED-GREEN-REFACTOR : test qui échoue → code minimal → test passe → refactor. Pas de code prod sans test qui échoue d'abord |
-| **Review** | requesting-code-review | Entre chaque tâche ou avant merge. Review contre le plan, issues par sévérité. Critical bloque |
+| **Review** | requesting-code-review | Avant merge. Review contre le plan, issues par sévérité. Critical bloque |
 | **Fin** | finishing-a-development-branch | Tests OK → options merge/PR/keep/discard |
 
-L'agent invoque ces skills automatiquement avant chaque action. Pas optionnel.
+L'agent invoque ces skills automatiquement avant chaque action, mais peut skipper les étapes non pertinentes si justifié explicitement (ex: pas de brainstorming pour un rename trivial).
 
 ## Debugging
 
