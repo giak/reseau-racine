@@ -1,6 +1,8 @@
 use clap::{Parser, Subcommand};
-use nostr::nips::nip19::FromBech32;
-use nostr::PublicKey;
+use nostr::nips::nip19::{FromBech32, ToBech32};
+use nostr::nips::nip59::UnwrappedGift;
+use nostr::{Kind, PublicKey};
+use nostr_sdk::{Filter, RelayPoolNotification};
 use rr_core::identity::Identity;
 use rr_core::message::MessageService;
 use rr_core::transport::nostr::NostrTransport;
@@ -254,7 +256,87 @@ async fn cmd_send(contact: &str, message: &str) {
 }
 
 async fn cmd_sync() {
-    println!("🔜 Synchronisation (EPIC 1 — à implémenter)");
+    let data_dir = rr_core::identity::IdentityManager::default_data_dir();
+
+    // Charger l'identité
+    let manager = rr_core::identity::IdentityManager::new(&data_dir);
+    let identity = match manager.load() {
+        Ok(id) => id,
+        Err(e) => {
+            eprintln!("Erreur: aucune identité trouvée (lancez `rr init`) : {}", e);
+            return;
+        }
+    };
+
+    // Connexion au relais
+    let relay = std::env::var("RR_RELAY").unwrap_or_else(|_| "wss://relay.damus.io".to_string());
+    let transport = match NostrTransport::with_keys(&relay, identity.keys().clone()).await {
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("Erreur connexion au relais {}: {}", relay, e);
+            return;
+        }
+    };
+
+    println!("🔄 Connecté à {}, synchronisation...", relay);
+    let client = transport.client().clone();
+
+    // Charger les contacts pour résoudre npub → nom
+    let contacts_path = data_dir.join("contacts.json");
+    let contacts: Vec<serde_json::Value> = if contacts_path.exists() {
+        let content = std::fs::read_to_string(&contacts_path).unwrap_or_default();
+        serde_json::from_str(&content).unwrap_or_default()
+    } else {
+        vec![]
+    };
+
+    // S'abonner aux GiftWrap pour notre pubkey
+    let subscription = Filter::new()
+        .kind(Kind::GiftWrap)
+        .pubkey(identity.public_key())
+        .limit(0);
+
+    if let Err(e) = client.subscribe(subscription, None).await {
+        eprintln!("Erreur abonnement: {}", e);
+        return;
+    }
+
+    let count = std::sync::Arc::new(std::sync::atomic::AtomicU32::new(0));
+    let count_clone = count.clone();
+
+    if let Err(e) = client
+        .handle_notifications(|notification| async {
+            if let RelayPoolNotification::Event { event, .. } = notification {
+                if event.kind == Kind::GiftWrap {
+                    match client.unwrap_gift_wrap(&event).await {
+                        Ok(UnwrappedGift { rumor, sender }) => {
+                            if rumor.kind == Kind::PrivateDirectMessage {
+                                count_clone.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                                let sender_npub =
+                                    sender.to_bech32().unwrap_or_else(|_| sender.to_string());
+                                let sender_name = contacts
+                                    .iter()
+                                    .find(|c| c["npub"] == sender_npub)
+                                    .and_then(|c| c["name"].as_str())
+                                    .unwrap_or(&sender_npub);
+                                println!("📨 {}: {}", sender_name, rumor.content);
+                            }
+                        }
+                        Err(e) => eprintln!("⚠️  Erreur déchiffrement: {}", e),
+                    }
+                }
+            }
+            Ok(false)
+        })
+        .await
+    {
+        eprintln!("Erreur notification loop: {}", e);
+        return;
+    }
+
+    if count.load(std::sync::atomic::Ordering::Relaxed) == 0 {
+        println!("📭 Aucun nouveau message.");
+    }
 }
 
 async fn cmd_restore(phrase: &str) {
