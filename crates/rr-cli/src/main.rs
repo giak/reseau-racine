@@ -7,6 +7,13 @@ use rr_core::identity::Identity;
 use rr_core::message::MessageService;
 use rr_core::transport::nostr::NostrTransport;
 use std::io::{self, Write};
+use std::path::PathBuf;
+
+fn data_dir() -> PathBuf {
+    std::env::var("RR_DATA_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| rr_core::identity::IdentityManager::default_data_dir())
+}
 
 #[derive(Parser)]
 #[command(name = "rr", about = "RéseauRacine CLI")]
@@ -50,8 +57,7 @@ async fn main() {
 
 async fn cmd_init() {
     let identity = Identity::new();
-    let data_dir = rr_core::identity::IdentityManager::default_data_dir();
-    let manager = rr_core::identity::IdentityManager::new(&data_dir);
+    let manager = rr_core::identity::IdentityManager::new(&data_dir());
     if let Err(e) = manager.save(&identity) {
         eprintln!("Erreur: {}", e);
         return;
@@ -83,12 +89,11 @@ async fn cmd_init() {
         println!();
     }
 
-    println!("Stockée dans: {:?}", data_dir.join("keys.json"));
+    println!("Stockée dans: {:?}", data_dir().join("keys.json"));
 }
 
 async fn cmd_identity() {
-    let data_dir = rr_core::identity::IdentityManager::default_data_dir();
-    let manager = rr_core::identity::IdentityManager::new(&data_dir);
+    let manager = rr_core::identity::IdentityManager::new(&data_dir());
     match manager.load() {
         Ok(identity) => {
             println!("npub: {}", identity.public_key_bech32());
@@ -100,8 +105,7 @@ async fn cmd_identity() {
 }
 
 async fn cmd_add_contact(npub: &str, name: &str) {
-    let contacts_dir = rr_core::identity::IdentityManager::default_data_dir();
-    let path = contacts_dir.join("contacts.json");
+    let path = data_dir().join("contacts.json");
     let mut contacts: Vec<serde_json::Value> = if path.exists() {
         let content = match std::fs::read_to_string(&path) {
             Ok(c) => c,
@@ -138,8 +142,7 @@ async fn cmd_add_contact(npub: &str, name: &str) {
 }
 
 async fn cmd_contacts() {
-    let contacts_dir = rr_core::identity::IdentityManager::default_data_dir();
-    let path = contacts_dir.join("contacts.json");
+    let path = data_dir().join("contacts.json");
     if path.exists() {
         let content = match std::fs::read_to_string(&path) {
             Ok(c) => c,
@@ -170,10 +173,8 @@ async fn cmd_contacts() {
 }
 
 async fn cmd_send(contact: &str, message: &str) {
-    let data_dir = rr_core::identity::IdentityManager::default_data_dir();
-
     // Charger l'identité
-    let manager = rr_core::identity::IdentityManager::new(&data_dir);
+    let manager = rr_core::identity::IdentityManager::new(&data_dir());
     let identity = match manager.load() {
         Ok(id) => id,
         Err(e) => {
@@ -183,7 +184,7 @@ async fn cmd_send(contact: &str, message: &str) {
     };
 
     // Résoudre le contact
-    let contacts_path = data_dir.join("contacts.json");
+    let contacts_path = data_dir().join("contacts.json");
     let contacts: Vec<serde_json::Value> = if contacts_path.exists() {
         let content = match std::fs::read_to_string(&contacts_path) {
             Ok(c) => c,
@@ -256,7 +257,7 @@ async fn cmd_send(contact: &str, message: &str) {
 }
 
 async fn cmd_sync() {
-    let data_dir = rr_core::identity::IdentityManager::default_data_dir();
+    let data_dir = data_dir();
 
     // Charger l'identité
     let manager = rr_core::identity::IdentityManager::new(&data_dir);
@@ -362,8 +363,7 @@ async fn cmd_sync() {
 async fn cmd_restore(phrase: &str) {
     match Identity::from_seed_phrase(phrase, "") {
         Ok(identity) => {
-            let data_dir = rr_core::identity::IdentityManager::default_data_dir();
-            let manager = rr_core::identity::IdentityManager::new(&data_dir);
+            let manager = rr_core::identity::IdentityManager::new(&data_dir());
             if let Err(e) = manager.save(&identity) {
                 eprintln!("Erreur sauvegarde: {}", e);
                 return;
