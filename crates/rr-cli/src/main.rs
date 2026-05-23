@@ -306,8 +306,7 @@ async fn cmd_sync() {
     // S'abonner aux GiftWrap pour notre pubkey
     let subscription = Filter::new()
         .kind(Kind::GiftWrap)
-        .pubkey(identity.public_key())
-        .limit(0);
+        .pubkey(identity.public_key());
 
     if let Err(e) = client.subscribe(subscription, None).await {
         eprintln!("Erreur abonnement: {}", e);
