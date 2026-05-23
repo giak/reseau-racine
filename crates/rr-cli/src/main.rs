@@ -314,19 +314,15 @@ async fn cmd_sync() {
         return;
     }
 
-    let count = std::sync::Arc::new(std::sync::atomic::AtomicU32::new(0));
-    let count_clone = count.clone();
+    println!("Appuyez sur Ctrl+C pour arrêter.");
 
-    let timeout_duration = std::time::Duration::from_secs(5);
-    let result = tokio::time::timeout(
-        timeout_duration,
-        client.handle_notifications(|notification| async {
+    if let Err(e) = client
+        .handle_notifications(|notification| async {
             if let RelayPoolNotification::Event { event, .. } = notification {
                 if event.kind == Kind::GiftWrap {
                     match client.unwrap_gift_wrap(&event).await {
                         Ok(UnwrappedGift { rumor, sender }) => {
                             if rumor.kind == Kind::PrivateDirectMessage {
-                                count_clone.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                                 let sender_npub =
                                     sender.to_bech32().unwrap_or_else(|_| sender.to_string());
                                 let sender_name = contacts
@@ -342,21 +338,10 @@ async fn cmd_sync() {
                 }
             }
             Ok(false)
-        }),
-    )
-    .await;
-
-    match result {
-        Ok(Ok(())) => {}
-        Ok(Err(e)) => {
-            eprintln!("Erreur notification loop: {}", e);
-            return;
-        }
-        Err(_elapsed) => {}
-    }
-
-    if count.load(std::sync::atomic::Ordering::Relaxed) == 0 {
-        println!("📭 Aucun nouveau message.");
+        })
+        .await
+    {
+        eprintln!("Erreur notification loop: {}", e);
     }
 }
 
