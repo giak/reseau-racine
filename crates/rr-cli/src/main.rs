@@ -183,15 +183,34 @@ async fn cmd_send(contact: &str, message: &str) {
     // Résoudre le contact
     let contacts_path = data_dir.join("contacts.json");
     let contacts: Vec<serde_json::Value> = if contacts_path.exists() {
-        match std::fs::read_to_string(&contacts_path) {
-            Ok(c) => serde_json::from_str(&c).unwrap_or_default(),
-            Err(_) => vec![],
+        let content = match std::fs::read_to_string(&contacts_path) {
+            Ok(c) => c,
+            Err(e) => {
+                eprintln!("Erreur lecture contacts.json: {}", e);
+                return;
+            }
+        };
+        match serde_json::from_str(&content) {
+            Ok(c) => c,
+            Err(e) => {
+                eprintln!("Erreur: contacts.json corrompu: {}", e);
+                return;
+            }
         }
     } else {
         vec![]
     };
     let receiver_npub = match contacts.iter().find(|c| c["name"] == contact) {
-        Some(c) => c["npub"].as_str().unwrap(),
+        Some(c) => match c["npub"].as_str() {
+            Some(n) => n,
+            None => {
+                eprintln!(
+                    "Erreur: contact '{}' sans npub (contacts.json corrompu)",
+                    contact
+                );
+                return;
+            }
+        },
         None => {
             eprintln!(
                 "Erreur: contact '{}' non trouvé. Ajoutez-le avec `rr add-contact`",
