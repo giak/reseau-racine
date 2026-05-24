@@ -53,6 +53,15 @@ enum Commands {
     Send { contact: String, message: String },
     /// Synchroniser les messages
     Sync,
+    /// Exporter l'identité vers KeePassXC
+    Export {
+        /// Chemin vers la base KeePassXC
+        #[arg(long)]
+        kdbx: String,
+        /// Entrée dans la base (défaut: Nostr/Identity)
+        #[arg(long, default_value = "Nostr/Identity")]
+        entry: String,
+    },
     /// Restaurer une identité depuis une seed phrase
     Restore { phrase: String },
 }
@@ -68,6 +77,7 @@ async fn main() {
         Commands::Contacts => cmd_contacts().await,
         Commands::Send { contact, message } => cmd_send(contact, message).await,
         Commands::Sync => cmd_sync().await,
+        Commands::Export { kdbx, entry } => cmd_export(kdbx, entry).await,
         Commands::Restore { phrase } => cmd_restore(phrase).await,
     }
 }
@@ -412,7 +422,7 @@ async fn cmd_sync() {
 async fn cmd_restore(phrase: &str) {
     match Identity::from_seed_phrase(phrase, "") {
         Ok(identity) => {
-            let manager = rr_core::identity::IdentityManager::new(data_dir());
+            let manager = IdentityManager::new(data_dir()).with_key_source(key_source());
             if let Err(e) = manager.save(&identity) {
                 eprintln!("Erreur sauvegarde: {}", e);
                 return;
@@ -423,4 +433,27 @@ async fn cmd_restore(phrase: &str) {
             eprintln!("Erreur: seed phrase invalide : {}", e);
         }
     }
+}
+
+async fn cmd_export(kdbx: &str, entry: &str) {
+    let manager = IdentityManager::new(data_dir()).with_key_source(key_source());
+
+    let identity = match manager.load() {
+        Ok(id) => id,
+        Err(e) => {
+            eprintln!("Erreur: identité non trouvée ({})", e);
+            eprintln!("Exécutez d'abord 'rr init'");
+            return;
+        }
+    };
+
+    if let Err(e) = manager.save_to_keepassxc(&identity, kdbx, entry) {
+        eprintln!("Erreur export KeePassXC: {}", e);
+        return;
+    }
+
+    println!("✅ Identité exportée vers KeePassXC ({})", kdbx);
+    println!("🔑 Entrée: {}", entry);
+    println!("🔑 Pubkey: {}", identity.public_key_bech32());
+    println!("💡 Utilisez: RR_KEYSTORE=keepassxc://{}/{} pour activer", kdbx, entry);
 }
