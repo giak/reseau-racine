@@ -7,6 +7,7 @@ use nostr::nips::nip19::ToBech32;
 use nostr::{Keys, PublicKey, SecretKey};
 use std::fmt;
 use std::path::PathBuf;
+use std::process::{Command, Stdio};
 use std::str::FromStr;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -22,17 +23,23 @@ impl KeySource {
             Ok(val) if val == "file" || val.is_empty() => KeySource::File,
             Ok(val) if val.starts_with("keepassxc://") => {
                 let rest = val.trim_start_matches("keepassxc://");
-                let Some((db_path, entry)) = rest.split_once('/') else {
-                    return KeySource::KeePassXc { db_path: rest.to_string(), entry: String::new() };
-                };
-                KeySource::KeePassXc { db_path: db_path.to_string(), entry: entry.to_string() }
+                if let Some(idx) = rest.find(".kdbx/") {
+                    let db_path = rest[..idx + 5].to_string();
+                    let entry = rest[idx + 6..].to_string();
+                    KeySource::KeePassXc { db_path, entry }
+                } else {
+                    KeySource::KeePassXc { db_path: rest.to_string(), entry: String::new() }
+                }
             }
             Ok(val) if val.starts_with("keepass-rs://") => {
                 let rest = val.trim_start_matches("keepass-rs://");
-                let Some((db_path, entry)) = rest.split_once('/') else {
-                    return KeySource::KeePassRs { db_path: rest.to_string(), entry: String::new() };
-                };
-                KeySource::KeePassRs { db_path: db_path.to_string(), entry: entry.to_string() }
+                if let Some(idx) = rest.find(".kdbx/") {
+                    let db_path = rest[..idx + 5].to_string();
+                    let entry = rest[idx + 6..].to_string();
+                    KeySource::KeePassRs { db_path, entry }
+                } else {
+                    KeySource::KeePassRs { db_path: rest.to_string(), entry: String::new() }
+                }
             }
             _ => KeySource::File,
         }
@@ -46,6 +53,20 @@ impl KeySource {
             KeystoreConfig::KeePassRs { db_path, entry } =>
                 Self::KeePassRs { db_path: db_path.clone(), entry: entry.clone() },
         }
+    }
+
+    pub fn detect_keepassxc_cli() -> bool {
+        let (cmd, flag) = if cfg!(target_os = "windows") {
+            ("where", "/Q")
+        } else {
+            ("which", "")
+        };
+        Command::new(cmd)
+            .arg("keepassxc-cli")
+            .arg(flag)
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false)
     }
 }
 
@@ -124,13 +145,12 @@ impl Default for Identity {
 #[derive(Debug)]
 pub struct IdentityManager {
     data_dir: PathBuf,
+    key_source: KeySource,
 }
 
 impl IdentityManager {
     pub fn new(data_dir: impl Into<PathBuf>) -> Self {
-        Self {
-            data_dir: data_dir.into(),
-        }
+        Self { data_dir: data_dir.into(), key_source: KeySource::File }
     }
 
     pub fn default_data_dir() -> PathBuf {
@@ -138,6 +158,11 @@ impl IdentityManager {
             .or_else(|_| std::env::var("USERPROFILE"))
             .unwrap_or_else(|_| ".".to_string());
         PathBuf::from(home).join(".rr")
+    }
+
+    pub fn with_key_source(mut self, source: KeySource) -> Self {
+        self.key_source = source;
+        self
     }
 
     pub fn load_or_create(&self) -> Result<Identity, Box<dyn std::error::Error>> {
@@ -152,6 +177,20 @@ impl IdentityManager {
     }
 
     pub fn load(&self) -> Result<Identity, Box<dyn std::error::Error>> {
+        match &self.key_source {
+            KeySource::File => self.load_file(),
+            KeySource::KeePassXc { db_path, entry } => {
+                let nsec = get_nsec_keepassxc(db_path, entry)?;
+                Identity::from_nsec(&nsec)
+            }
+            KeySource::KeePassRs { db_path, entry } => {
+                let nsec = get_nsec_keepassrs(db_path, entry)?;
+                Identity::from_nsec(&nsec)
+            }
+        }
+    }
+
+    pub fn load_file(&self) -> Result<Identity, Box<dyn std::error::Error>> {
         let key_path = self.data_dir.join("keys.json");
         let content = std::fs::read_to_string(&key_path)?;
         let data: serde_json::Value = serde_json::from_str(&content)?;
@@ -175,6 +214,64 @@ impl IdentityManager {
         }
         Ok(())
     }
+
+    pub fn save_to_keepassxc(&self, identity: &Identity, db_path: &str, entry: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let expanded = shellexpand::tilde(db_path).to_string();
+        let nsec = identity.secret_key_bech32();
+        let npub = identity.public_key_bech32();
+
+        let mut child = Command::new("keepassxc-cli")
+            .args(["add", "--non-interactive", "-p", &expanded, entry])
+            .stdin(Stdio::piped())
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
+            .spawn()?;
+
+        if let Some(mut stdin) = child.stdin.take() {
+            use std::io::Write;
+            writeln!(stdin, "{}\n{}", nsec, npub)?;
+        }
+
+        let status = child.wait()?;
+        if !status.success() {
+            return Err("keepassxc-cli add failed".into());
+        }
+
+        Ok(())
+    }
+}
+
+fn get_nsec_keepassxc(db_path: &str, entry: &str) -> Result<String, Box<dyn std::error::Error>> {
+    let expanded = shellexpand::tilde(db_path).to_string();
+    let out = Command::new("keepassxc-cli")
+        .args(["show", "--quiet", "-s", "-a", "Password", &expanded, entry])
+        .stdin(Stdio::inherit())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::inherit())
+        .output()?;
+    if !out.status.success() {
+        return Err("keepassxc-cli failed: check master password and entry path".into());
+    }
+    let nsec = String::from_utf8(out.stdout)?.trim().to_string();
+    if nsec.is_empty() { return Err("keepassxc-cli returned empty password".into()); }
+    Ok(nsec)
+}
+
+fn get_nsec_keepassrs(db_path: &str, entry: &str) -> Result<String, Box<dyn std::error::Error>> {
+    let expanded = shellexpand::tilde(db_path).to_string();
+    let mut file = std::fs::File::open(&expanded)?;
+    let password = rpassword::prompt_password("KeePass master password: ")?;
+    let key = keepass::DatabaseKey::new().with_password(&password);
+    let database = keepass::db::Database::open(&mut file, key)?;
+    for entry_ref in database.root().entries() {
+        let title = entry_ref.get_title().unwrap_or("");
+        if title == entry || entry.ends_with(&format!("/{}", title)) {
+            if let Some(pwd) = entry_ref.get_password() {
+                return Ok(pwd.to_string());
+            }
+        }
+    }
+    Err(format!("Entry '{}' not found in KeePass database", entry).into())
 }
 
 #[cfg(test)]
@@ -329,5 +426,40 @@ mod tests {
     fn test_default_identity() {
         let identity = Identity::default();
         assert!(!identity.public_key_bech32().is_empty());
+    }
+
+    #[test]
+    fn test_key_source_from_env_default() {
+        std::env::remove_var("RR_KEYSTORE");
+        assert_eq!(KeySource::from_env(), KeySource::File);
+    }
+
+    #[test]
+    fn test_key_source_from_env_file() {
+        std::env::set_var("RR_KEYSTORE", "file");
+        assert_eq!(KeySource::from_env(), KeySource::File);
+        std::env::remove_var("RR_KEYSTORE");
+    }
+
+    #[test]
+    fn test_key_source_from_env_keepassxc() {
+        std::env::set_var("RR_KEYSTORE", "keepassxc://~/vault.kdbx/Nostr/Identity");
+        assert_eq!(
+            KeySource::from_env(),
+            KeySource::KeePassXc { db_path: "~/vault.kdbx".into(), entry: "Nostr/Identity".into() }
+        );
+        std::env::remove_var("RR_KEYSTORE");
+    }
+
+    #[test]
+    fn test_key_source_from_env_invalid_fallsback() {
+        std::env::set_var("RR_KEYSTORE", "garbage");
+        assert_eq!(KeySource::from_env(), KeySource::File);
+        std::env::remove_var("RR_KEYSTORE");
+    }
+
+    #[test]
+    fn test_detect_keepassxc_cli() {
+        let _detected = KeySource::detect_keepassxc_cli();
     }
 }
