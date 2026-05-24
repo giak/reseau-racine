@@ -57,7 +57,11 @@ pub struct CellStore {
 
 impl CellStore {
     pub fn path() -> PathBuf {
-        crate::config::Config::config_dir().join("cells.json")
+        let base = std::env::var("RR_DATA_DIR")
+            .map(PathBuf::from)
+            .ok()
+            .unwrap_or_else(crate::config::Config::config_dir);
+        base.join("cells.json")
     }
 
     pub fn load() -> Self {
