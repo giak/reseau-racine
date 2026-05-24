@@ -87,7 +87,7 @@ Des critères de succès forts permettent de boucler indépendamment. Des critè
 8 status checks requis : `lint`, `test`, `audit`, `fuzz`, `udeps`, `check-cross (macos-latest)`, `check-cross (windows-latest)`, `build-cli`.
 
 ```
-feature/<scope> → PR → CI green → squash merge → main
+feature/<scope> → PR → CI green → sync markdowns (TRACKING, README, GUIDE, specs, plans) → squash merge → main
 ```
 
 Pas de push direct sur `main`. Jamais de merge commit — `squash merge` seulement.
@@ -132,6 +132,9 @@ rtk git worktree list
 # PR
 rtk gh pr create --fill
 # Après CI green
+rtk git add docs/ README.md AGENTS.md
+rtk git commit -m "docs: sync markdowns (TRACKING, README, GUIDE, specs, plans)"
+rtk git push
 rtk gh pr merge --squash
 # Solo dev fast-track (admin bypass)
 rtk gh pr merge --squash --admin

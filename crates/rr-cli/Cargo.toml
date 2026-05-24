@@ -1,7 +1,9 @@
 [package]
 name = "rr-cli"
 version = "0.1.0"
-description = "RéseauRacine CLI - POC client"
+description = "RéseauRacine CLI — messagerie chiffrée P2P sur Nostr"
+homepage.workspace = true
+repository.workspace = true
 authors.workspace = true
 edition.workspace = true
 license.workspace = true

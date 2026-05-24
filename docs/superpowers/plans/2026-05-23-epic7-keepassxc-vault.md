@@ -1,6 +1,6 @@
 # EPIC 7 — KeePassXC Vault Implementation Plan
-
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+# EPIC 7 — KeePassXC Vault Implementation Plan
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Distribution binaire + vault KeePassXC. L'utilisateur installe `rr` en 1 commande, reçoit un warning si clés en clair, peut basculer vers KeePassXC.
 
@@ -31,7 +31,7 @@
 
 ### Task 1: CI release (cross-compile)
 
-- [ ] **Step 1: Ajouter job `release` à `ci.yml`**
+- [x] **Step 1: Ajouter job `release` à `ci.yml`**
 
 Dans `.github/workflows/ci.yml`, après le job `build-cli` :
 
@@ -53,7 +53,7 @@ Dans `.github/workflows/ci.yml`, après le job `build-cli` :
 
 Expected : seulement déclenché sur `git tag v*`
 
-- [ ] **Step 2: Mettre à jour `Cargo.toml` avec metadata cargo publish**
+- [x] **Step 2: Mettre à jour `Cargo.toml` avec metadata cargo publish**
 
 Ajouter à `crates/rr-cli/Cargo.toml` :
 
@@ -74,7 +74,7 @@ homepage = "https://github.com/giak/reseau-racine"
 repository = "https://github.com/giak/reseau-racine"
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 rtk git add .github/workflows/ci.yml Cargo.toml crates/rr-cli/Cargo.toml
@@ -85,7 +85,7 @@ rtk git commit -m "feat: add release CI job + cargo publish metadata"
 
 ### Task 2: Warning clés en clair dans `rr init`
 
-- [ ] **Step 1: Modifier `cmd_init` dans `main.rs`**
+- [x] **Step 1: Modifier `cmd_init` dans `main.rs`**
 
 Dans `crates/rr-cli/src/main.rs`, après `manager.save(&identity)` :
 
@@ -111,7 +111,7 @@ async fn cmd_init() {
 }
 ```
 
-- [ ] **Step 2: Compiler**
+- [x] **Step 2: Compiler**
 
 ```bash
 ./scripts/dev.sh cargo check --package rr-cli
@@ -119,7 +119,7 @@ async fn cmd_init() {
 
 Expected : success
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 rtk git add crates/rr-cli/src/main.rs
@@ -132,7 +132,7 @@ rtk git commit -m "feat: add plaintext key warning in rr init"
 
 ### Task 3: Ajouter les dépendances
 
-- [ ] **Step 1: Ajouter au workspace**
+- [x] **Step 1: Ajouter au workspace**
 
 Modifier `Cargo.toml` :
 
@@ -144,7 +144,7 @@ rpassword = "7"
 shellexpand = "3"
 ```
 
-- [ ] **Step 2: Ajouter à rr-core**
+- [x] **Step 2: Ajouter à rr-core**
 
 Modifier `crates/rr-core/Cargo.toml` :
 
@@ -156,7 +156,7 @@ rpassword.workspace = true
 shellexpand.workspace = true
 ```
 
-- [ ] **Step 3: Vérifier la compilation**
+- [x] **Step 3: Vérifier la compilation**
 
 ```bash
 ./scripts/dev.sh cargo check --package rr-core
@@ -164,7 +164,7 @@ shellexpand.workspace = true
 
 Expected : success
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 rtk git add Cargo.toml crates/rr-core/Cargo.toml
@@ -175,7 +175,7 @@ rtk git commit -m "deps: add keepass, rpassword, shellexpand"
 
 ### Task 4: Config.toml + `KeySource::from_config()`
 
-- [ ] **Step 1: Définir le format config**
+- [x] **Step 1: Définir le format config**
 
 ```rust
 // crates/rr-core/src/config.rs (nouveau fichier)
@@ -213,7 +213,7 @@ impl Default for Config {
 }
 ```
 
-- [ ] **Step 2: Lire/écrire le fichier config.toml**
+- [x] **Step 2: Lire/écrire le fichier config.toml**
 
 ```rust
 impl Config {
@@ -252,14 +252,14 @@ impl Config {
 }
 ```
 
-- [ ] **Step 3: Ajouter `mod config;` dans `lib.rs`**
+- [x] **Step 3: Ajouter `mod config;` dans `lib.rs`**
 
 ```rust
 // crates/rr-core/src/lib.rs
 pub mod config;
 ```
 
-- [ ] **Step 4: `KeySource::from_config()`**
+- [x] **Step 4: `KeySource::from_config()`**
 
 ```rust
 // identity.rs
@@ -278,7 +278,7 @@ impl KeySource {
 
 Trier la priorité (dans `key_source()` dans rr-cli) : `RR_KEYSTORE` env var > `config.toml` > défaut File.
 
-- [ ] **Step 5: Ajouter `serde` + `toml` aux dépendances**
+- [x] **Step 5: Ajouter `serde` + `toml` aux dépendances**
 
 ```toml
 # crates/rr-core/Cargo.toml
@@ -286,7 +286,7 @@ serde = { version = "1", features = ["derive"] }
 toml = "0.8"
 ```
 
-- [ ] **Step 6: Compiler**
+- [x] **Step 6: Compiler**
 
 ```bash
 ./scripts/dev.sh cargo check --package rr-core
@@ -294,7 +294,7 @@ toml = "0.8"
 
 Expected : success
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 rtk git add crates/rr-core/src/config.rs crates/rr-core/src/lib.rs crates/rr-core/Cargo.toml
@@ -305,7 +305,7 @@ rtk git commit -m "feat: config.toml + KeySource::from_config()"
 
 ### Task 5: `KeySource` enum + backends dans identity.rs
 
-- [ ] **Step 1: Ajouter les imports et le enum**
+- [x] **Step 1: Ajouter les imports et le enum**
 
 Dans `crates/rr-core/src/identity.rs` :
 
@@ -321,18 +321,31 @@ pub enum KeySource {
 }
 
 impl KeySource {
+    /// Parse RR_KEYSTORE env var.
+    /// Format: keepassxc://<db_path>/<entry> or keepass-rs://<db_path>/<entry>
+    /// db_path is split at `.kdbx/` to distinguish path from entry (both can contain /).
     pub fn from_env() -> Self {
         match std::env::var("RR_KEYSTORE") {
             Ok(val) if val == "file" || val.is_empty() => KeySource::File,
             Ok(val) if val.starts_with("keepassxc://") => {
                 let rest = val.trim_start_matches("keepassxc://");
-                let (db_path, entry) = rest.split_once('/').unwrap_or((rest, ""));
-                KeySource::KeePassXc { db_path: db_path.to_string(), entry: entry.to_string() }
+                if let Some(idx) = rest.find(".kdbx/") {
+                    let db_path = rest[..idx + 5].to_string();
+                    let entry = rest[idx + 6..].to_string();
+                    KeySource::KeePassXc { db_path, entry }
+                } else {
+                    KeySource::KeePassXc { db_path: rest.to_string(), entry: String::new() }
+                }
             }
             Ok(val) if val.starts_with("keepass-rs://") => {
                 let rest = val.trim_start_matches("keepass-rs://");
-                let (db_path, entry) = rest.split_once('/').unwrap_or((rest, ""));
-                KeySource::KeePassRs { db_path: db_path.to_string(), entry: entry.to_string() }
+                if let Some(idx) = rest.find(".kdbx/") {
+                    let db_path = rest[..idx + 5].to_string();
+                    let entry = rest[idx + 6..].to_string();
+                    KeySource::KeePassRs { db_path, entry }
+                } else {
+                    KeySource::KeePassRs { db_path: rest.to_string(), entry: String::new() }
+                }
             }
             _ => KeySource::File,
         }
@@ -354,7 +367,7 @@ impl KeySource {
 }
 ```
 
-- [ ] **Step 2: Ajouter `key_source` champ et `with_key_source()`**
+- [x] **Step 2: Ajouter `key_source` champ et `with_key_source()`**
 
 ```rust
 pub struct IdentityManager {
@@ -374,7 +387,7 @@ impl IdentityManager {
 }
 ```
 
-- [ ] **Step 3: Réécrire `load()` pour router selon `key_source` + ajouter `load_file()`**
+- [x] **Step 3: Réécrire `load()` pour router selon `key_source` + ajouter `load_file()`**
 
 ```rust
 pub fn load(&self) -> Result<Identity, Box<dyn std::error::Error>> {
@@ -433,7 +446,7 @@ fn get_nsec_keepassrs(db_path: &str, entry: &str) -> Result<String, Box<dyn std:
 }
 ```
 
-- [ ] **Step 4: Ajouter `save_to_keepassxc()`**
+- [x] **Step 4: Ajouter `save_to_keepassxc()`**
 
 ```rust
 pub fn save_to_keepassxc(&self, identity: &Identity, db_path: &str, entry: &str) -> Result<(), Box<dyn std::error::Error>> {
@@ -462,7 +475,7 @@ pub fn save_to_keepassxc(&self, identity: &Identity, db_path: &str, entry: &str)
 }
 ```
 
-- [ ] **Step 5: Ajouter les tests**
+- [x] **Step 5: Ajouter les tests**
 
 Dans le module `#[cfg(test)]` existant de `identity.rs` :
 
@@ -504,7 +517,7 @@ fn test_detect_keepassxc_cli() {
 }
 ```
 
-- [ ] **Step 6: Compiler et tester**
+- [x] **Step 6: Compiler et tester**
 
 ```bash
 ./scripts/dev.sh cargo test --package rr-core
@@ -512,7 +525,7 @@ fn test_detect_keepassxc_cli() {
 
 Expected : 30+ tests pass
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 rtk git add crates/rr-core/src/identity.rs
@@ -523,7 +536,7 @@ rtk git commit -m "feat: KeySource enum, keepassxc-cli and keepass-rs backends, 
 
 ### Task 6: Propager RR_KEYSTORE dans rr-cli + `rr init --kdbx`
 
-- [ ] **Step 1: Ajouter `key_source()` helper + `--kdbx` flag à `Init`**
+- [x] **Step 1: Ajouter `key_source()` helper + `--kdbx` flag à `Init`**
 
 Dans `crates/rr-cli/src/main.rs`, avant `struct Cli` :
 
@@ -563,11 +576,11 @@ enum Commands {
 }
 ```
 
-- [ ] **Step 2: Détection interactive (intégrée dans `cmd_init`)**
+- [x] **Step 2: Détection interactive (intégrée dans `cmd_init`)**
 
 La détection interactive est directement intégrée dans `cmd_init` (Step 3). Quand `rr init` est appelé sans `--kdbx` mais que `keepassxc-cli` est détecté dans PATH, l'utilisateur est invité à choisir avant de créer l'identité.
 
-- [ ] **Step 3: Réécrire `cmd_init` avec support `--kdbx` + détection**
+- [x] **Step 3: Réécrire `cmd_init` avec support `--kdbx` + détection**
 
 ```rust
 use std::io::Write;
@@ -646,7 +659,7 @@ async fn cmd_init_file(identity: Identity, manager: IdentityManager) {
 }
 ```
 
-- [ ] **Step 3: Ajouter `--kdbx` et `--entry` aux autres commandes**
+- [x] **Step 3: Ajouter `--kdbx` et `--entry` aux autres commandes**
 
 Même pattern pour `Send`, `Sync`, `Identity` si l'utilisateur veut spécifier le chemins sans RR_KEYSTORE :
 
@@ -664,7 +677,7 @@ enum Commands {
 
 Pas besoin de `--kdbx` sur chaque commande — `RR_KEYSTORE` ou `config.toml` (future) suffit.
 
-- [ ] **Step 4: Mettre à jour le match dans `main()`**
+- [x] **Step 4: Mettre à jour le match dans `main()`**
 
 ```rust
 match &cli.command {
@@ -675,7 +688,7 @@ match &cli.command {
 }
 ```
 
-- [ ] **Step 5: Mettre à jour `cmd_send` et `cmd_sync` pour utiliser `key_source()`**
+- [x] **Step 5: Mettre à jour `cmd_send` et `cmd_sync` pour utiliser `key_source()`**
 
 ```rust
 async fn cmd_send(contact: &str, message: &str) {
@@ -687,7 +700,7 @@ async fn cmd_send(contact: &str, message: &str) {
 
 Même changement dans `cmd_identity` et `cmd_sync` (si load est appelé).
 
-- [ ] **Step 6: Compiler**
+- [x] **Step 6: Compiler**
 
 ```bash
 ./scripts/dev.sh cargo check --package rr-cli
@@ -695,7 +708,7 @@ Même changement dans `cmd_identity` et `cmd_sync` (si load est appelé).
 
 Expected : success
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 rtk git add crates/rr-cli/src/main.rs
@@ -706,7 +719,7 @@ rtk git commit -m "feat: rr init --kdbx, RR_KEYSTORE propagation to all commands
 
 ### Task 7: `rr export` — migrer identité existante vers KeePassXC
 
-- [ ] **Step 1: Ajouter la sous-commande `Export`**
+- [x] **Step 1: Ajouter la sous-commande `Export`**
 
 ```rust
 #[derive(Subcommand)]
@@ -724,13 +737,13 @@ enum Commands {
 }
 ```
 
-- [ ] **Step 2: Ajouter dans le match**
+- [x] **Step 2: Ajouter dans le match**
 
 ```rust
 Commands::Export { kdbx, entry } => cmd_export(kdbx, entry).await,
 ```
 
-- [ ] **Step 3: Implémenter `cmd_export`**
+- [x] **Step 3: Implémenter `cmd_export`**
 
 ```rust
 async fn cmd_export(kdbx: &str, entry: &str) {
@@ -758,7 +771,7 @@ async fn cmd_export(kdbx: &str, entry: &str) {
 }
 ```
 
-- [ ] **Step 4: Compiler**
+- [x] **Step 4: Compiler**
 
 ```bash
 ./scripts/dev.sh cargo check --package rr-cli
@@ -766,7 +779,7 @@ async fn cmd_export(kdbx: &str, entry: &str) {
 
 Expected : success
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 rtk git add crates/rr-cli/src/main.rs
@@ -777,7 +790,7 @@ rtk git commit -m "feat: add rr export command for KeePassXC migration"
 
 ### Task 8: Tests et vérification finale
 
-- [ ] **Step 1: Tous les tests**
+- [x] **Step 1: Tous les tests**
 
 ```bash
 ./scripts/dev.sh cargo test --workspace --exclude rr-tauri --locked
@@ -785,7 +798,7 @@ rtk git commit -m "feat: add rr export command for KeePassXC migration"
 
 Expected : 33+ pass (29 existants + 4 nouveaux KeySource)
 
-- [ ] **Step 2: Rétro-compat test**
+- [x] **Step 2: Rétro-compat test**
 
 ```bash
 ./scripts/dev.sh env RR_DATA_DIR=/tmp/rr-oldtest cargo run --package rr-cli -- init
@@ -794,7 +807,7 @@ Expected : 33+ pass (29 existants + 4 nouveaux KeySource)
 
 Expected : exactement comme avant (warning en plus)
 
-- [ ] **Step 3: Lint**
+- [x] **Step 3: Lint**
 
 ```bash
 ./scripts/dev.sh cargo clippy --workspace --exclude rr-tauri -- -D warnings
@@ -802,7 +815,7 @@ Expected : exactement comme avant (warning en plus)
 
 Expected : 0 warnings
 
-- [ ] **Step 4: Commit final**
+- [x] **Step 4: Commit final**
 
 ```bash
 rtk git add -A && rtk git commit -m "test: full test suite + retro-compat verification"

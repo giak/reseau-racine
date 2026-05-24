@@ -6,6 +6,8 @@ members = ["crates/*"]
 edition = "2021"
 license = "AGPL-3.0-or-later"
 authors = ["RéseauRacine contributors"]
+homepage = "https://github.com/giak/reseau-racine"
+repository = "https://github.com/giak/reseau-racine"
 
 [workspace.dependencies]
 nostr = { version = "0.44", features = ["nip44", "nip59", "nip06"] }
@@ -15,3 +17,8 @@ serde_json = "1"
 tokio = { version = "1", features = ["full"] }
 proptest = "1"
 bip39 = { version = "2", features = ["rand"] }
+keepass = "0.12"
+rpassword = "7"
+shellexpand = "3"
+toml = "0.8"
+dirs = "6"

@@ -12,6 +12,11 @@ nostr-sdk.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 bip39.workspace = true
+keepass.workspace = true
+rpassword.workspace = true
+shellexpand.workspace = true
+toml.workspace = true
+dirs.workspace = true
 
 [dev-dependencies]
 proptest.workspace = true

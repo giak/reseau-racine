@@ -52,21 +52,24 @@ cd reseau-racine
 Le programme va :
 
 1. Générer une paire de clés cryptographique (secp256k1)
-2. Sauvegarder la clé privée dans `~/.rr/keys.json` (permissions 0600)
+2. Sauvegarder la clé privée (afficher un warning si stockage en clair)
 3. Afficher votre identité publique (npub)
 
 Exemple de sortie :
 
 ```
-✅ Identité créée
-npub: npub1a2b3c4d5e6f7g8h9i0j...
+✅ Identité créée : npub1a2b3c4d5e6f7g8h9i0j...
 
-⚠️  La seed phrase suivante est votre SEULE sauvegarde. Prêt à voir ? (oui/non) : oui
+⚠️  SEULE sauvegarde. Voir la seed phrase ? (oui/non) : oui
 
 SEED PHRASE (notez ces 12 mots sur papier, pas de fichier numérique) :
 oiseau montagne clé stylo arbre fenêtre livre nuage soleil rivière lac porte
 
-Stockée dans: /home/user/.rr/keys.json
+Stockée dans: /home/user/.local/share/reseau-racine/keys.json
+
+⚠️  Clé stockée en clair sur le disque.
+⚠️  Pour plus de sécurité, installe KeePassXC et utilise :
+💡  rr init --kdbx ~/vault.kdbx
 ```
 
 > **La seed phrase est votre seule sauvegarde.** Perdue = identité perdue.
@@ -96,11 +99,26 @@ Lister ses contacts :
 
 ---
 
-## 5. Envoyer un message (bientôt)
+## 5. Envoyer un message
 
-Les commandes `send` et `sync` sont en cours de développement (EPIC 1).
+```bash
+./scripts/dev.sh cargo run --package rr-cli -- send bob "Salut !"
+```
 
-En attendant, l'architecture est prête :
+Le message est :
+1. Chiffré avec la clé publique du destinataire (NIP-44)
+2. Emballé dans un GiftWrap (kind 1059)
+3. Publié sur le relais Nostr
+
+Recevoir les messages en temps réel :
+
+```bash
+./scripts/dev.sh cargo run --package rr-cli -- sync
+```
+
+Les messages arrivent en direct. `Ctrl+C` pour arrêter.
+
+Architecture :
 
 ```
 ┌─ Vous ─────────────────────┐       ┌─ Relais Nostr ────┐       ┌─ Contact ──────────────┐
@@ -128,7 +146,35 @@ La seed phrase de 12 mots régénère exactement la même paire de clés.
 
 ---
 
-## 7. Développer
+## 7. KeePassXC (coffre-fort de clés)
+
+Par défaut, la clé privée est stockée en clair dans `~/.local/share/reseau-racine/keys.json`.
+Pour une sécurité renforcée, `rr` peut stocker les clés dans une base KeePassXC.
+
+### Initialisation directe dans KeePassXC
+
+```bash
+# Créer d'abord la base via l'interface KeePassXC
+# Puis :
+./scripts/dev.sh cargo run --package rr-cli -- init --kdbx ~/vault.kdbx
+
+# rr détecte keepassxc-cli, te demande le mot de passe,
+# et sauvegarde automatiquement la config
+```
+
+### Migrer une identité existante
+
+```bash
+./scripts/dev.sh cargo run --package rr-cli -- export --kdbx ~/vault.kdbx
+export RR_KEYSTORE=keepassxc://~/vault.kdbx/Nostr/Identity
+```
+
+La variable d'env `RR_KEYSTORE` ou le fichier `~/.config/reseau-racine/config.toml`
+définit le backend : `file`, `keepassxc://<db>/<entry>`, ou `keepass-rs://<db>/<entry>`.
+
+---
+
+## 8. Développer
 
 ### Architecture du code
 
@@ -176,7 +222,7 @@ docker compose -f .devcontainer/compose.yaml logs -f nostr-relay
 
 ---
 
-## 8. Dépannage
+## 9. Dépannage
 
 | Symptôme | Cause | Solution |
 |----------|-------|----------|
@@ -190,7 +236,8 @@ docker compose -f .devcontainer/compose.yaml logs -f nostr-relay
 ## Feuille de route
 
 - **Phase 0** — Fondations : crypto, identité, transport Nostr ✓
-- **EPIC 1** — Messagerie P2P : envoi/sync via NIP-17
+- **EPIC 1** — Messagerie P2P : envoi/sync via NIP-17 ✓
+- **EPIC 7** — KeePassXC vault : sécurité des clés ✓
 - **EPIC 2** — Contacts et discovery
 - **EPIC 3** — Groupes et salons
 - **EPIC 4** — Interface graphique (Tauri)

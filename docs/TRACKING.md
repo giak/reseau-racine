@@ -1,6 +1,6 @@
 # Dashboard Réseau Racine
 
-> Mis à jour : 2026-05-23
+> Mis à jour : 2026-05-24
 
 ## Status global
 
@@ -12,7 +12,7 @@
 ░░░░░░░░░░  EPIC 4  — Client Tauri            ⬜  —
 ░░░░░░░░░░  EPIC 5  — Forward Secrecy         ⬜  —
 ░░░░░░░░░░  EPIC 6  — Nœud relais             ⬜  —
-░░░░░░░░░░  EPIC 7  — Sécurité CLI            ⬜  —  KeePassXC vault + zeroize
+████████░░  EPIC 7  — Sécurité CLI            ✅  4/4   KeePassXC vault
 ░░░░░░░░░░  EPIC 8  — Performance             ⬜  —  Benchmarks système
 ░░░░░░░░░░  EPIC 9  — Simulation charge       ⬜  —  rr-stress load testing
 ```
@@ -59,7 +59,7 @@
 
 | Métrique | Status | Détail |
 |----------|--------|--------|
-| **Tests** | ✅ 29/29 pass | 4 suites (unit + proptest + doc + binary) |
+| **Tests** | ✅ 34/34 pass | 31 unit + 3 proptest |
 | **Clippy** | ✅ 0 warnings | -- -D warnings en CI |
 | **cargo-deny** | ✅ 4/4 OK | advisories, bans, licenses, sources |
 
@@ -189,18 +189,42 @@ RUST_LOG=debug ./scripts/dev.sh env RR_DATA_DIR=/tmp/rr-bob cargo run --package 
 
 ---
 
-## EPIC 7 — Sécurité CLI ⬜
+## EPIC 7 — Sécurité CLI ✅ (4/4)
 
 Vault KeePassXC pour clés Nostr, remove storage JSON en clair.
 
 | Story | Status | Détail |
 |-------|--------|--------|
-| `RR_KEYSTORE=keepassxc://...` backend | ⬜ | Sous-processus keepassxc-cli, master password sur stdin |
-| `RR_KEYSTORE=keepass-rs://...` fallback | ⬜ | Crate `keepass` Rust, ouvre KDBX direct |
-| zeroize mémoire après usage | ⬜ | Zéroter SecretKey après NIP-44/NIP-17 |
-| Rétro-compatibilité `file` | ⬜ | RR_KEYSTORE absent → comportement actuel inchangé |
+| Config.toml + KeySource (env/config) | ✅ | `~/.config/reseau-racine/config.toml`, priorité RR_KEYSTORE > config > File |
+| `RR_KEYSTORE=keepassxc://...` backend | ✅ | Sous-processus keepassxc-cli, master password sur stdin |
+| `RR_KEYSTORE=keepass-rs://...` fallback | ✅ | Crate `keepass` Rust, ouvre KDBX direct |
+| `rr init --kdbx` + détection interactive | ✅ | RR_KEYSTORE propagé à toutes les commandes, wizard si keepassxc-cli détecté |
+| `rr export` migration | ✅ | Exporte identité existante vers KeePassXC |
+| Rétro-compatibilité `file` | ✅ | RR_KEYSTORE absent/config.toml absent → comportement actuel inchangé |
+
+### Qualité
+
+| Métrique | Status |
+|----------|--------|
+| Tests | ✅ 34/34 pass (31 unit + 3 proptest) |
+| Clippy | ✅ 0 warnings (-- -D warnings) |
+| Rétro-compat | ✅ `rr init` + `rr identity` sans KeePassXC identique à avant |
+| CI release | ✅ taiki-e/upload-rust-binary-action (tag v* only) |
 
 **Spec :** `docs/superpowers/specs/2026-05-23-security-keepassxc-vault.md`
+**Plan :** `docs/superpowers/plans/2026-05-23-epic7-keepassxc-vault.md`
+**Guide KeePassXC :** `docs/GUIDE.md#sécuriser-tes-clés-avec-keepassxc`
+
+### Architecture
+
+| Composant | Fichier | Rôle |
+|-----------|---------|------|
+| Config | `crates/rr-core/src/config.rs` | Config struct, load/save toml, config_dir |
+| KeySource | `crates/rr-core/src/identity.rs` | Enum File/KeePassXc/KeePassRs, from_env/from_config |
+| Backend CLI | `crates/rr-core/src/identity.rs` | detect_keepassxc_cli, get_nsec_keepassxc, save_to_keepassxc |
+| Backend Rust | `crates/rr-core/src/identity.rs` | get_nsec_keepassrs (keepass-rs crate) |
+| CLI flags | `crates/rr-cli/src/main.rs` | --kdbx, --entry, rr export |
+| CI release | `.github/workflows/ci.yml` | nouveau job release (taiki-e) |
 
 ---
 
