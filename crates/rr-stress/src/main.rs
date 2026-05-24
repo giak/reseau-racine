@@ -86,12 +86,12 @@ async fn create_clients(relay: &str, users: usize, pre_connect: bool) -> Vec<Cli
     clients
 }
 
-async fn run_phase(clients: &[Client], msgs: usize, interval: Duration, state: &Arc<SharedState>) {
+async fn run_phase(clients: &[Client], msgs: usize, interval: Duration, parallelism: usize, state: &Arc<SharedState>) {
     let n = clients.len();
     if n == 0 {
         return;
     }
-    let semaphore = Arc::new(tokio::sync::Semaphore::new(4));
+    let semaphore = Arc::new(tokio::sync::Semaphore::new(parallelism));
     let mut handles = Vec::with_capacity(n);
 
     for (i, client) in clients.iter().enumerate() {
@@ -155,13 +155,13 @@ async fn run_stress(args: Args) {
     println!("  ✅ {} clients connected", clients.len());
 
     println!("→ Phase 1: Hello (1 msg each)...");
-    run_phase(&clients, 1, interval, &state).await;
+    run_phase(&clients, 1, interval, args.parallelism, &state).await;
     println!("  ✅ Hello done");
 
     if args.messages > 1 {
         let remaining = args.messages - 1;
         println!("→ Phase 2: Chat ({} msgs each)...", remaining);
-        run_phase(&clients, remaining, interval, &state).await;
+        run_phase(&clients, remaining, interval, args.parallelism, &state).await;
         println!("  ✅ Chat done");
     }
 
