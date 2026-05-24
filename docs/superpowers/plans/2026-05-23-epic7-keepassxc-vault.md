@@ -6,8 +6,8 @@
 
 **Architecture (3 phases) :**
 1. CI release (cross-compile) + `cargo publish` + avertissement dans `rr init`
-2. `KeySource` enum + backends keepassxc-cli/keepass-rs + `rr init --kdbx` + `rr export`
-3. Config file `~/.config/reseau-racine/config.toml` pour éviter les env vars
+2. Config file `~/.config/reseau-racine/config.toml` + `KeySource::from_config()`
+3. `KeySource` enum + backends keepassxc-cli/keepass-rs + `rr init --kdbx` + `rr export`
 
 **Tech Stack:** Rust, CI: taiki-e/upload-rust-binary-action, `keepass` crate, `rpassword`, `shellexpand`, `serde` (config)
 
@@ -20,7 +20,8 @@
 | `.github/workflows/ci.yml` | Ajouter job `release` (cross-compile + upload) |
 | `Cargo.toml` (workspace) | Ajouter `keepass`, `rpassword`, `shellexpand` en workspace deps |
 | `crates/rr-core/Cargo.toml` | Ajouter `keepass`, `rpassword`, `shellexpand` aux deps |
-| `crates/rr-core/src/identity.rs` | Ajouter `KeySource` enum, `with_key_source()`, 2 backends, `detect_keepassxc_cli()`, `save_to_keepassxc()` |
+| `crates/rr-core/src/config.rs` | Nouveau — struct Config, KeystoreConfig, load/save, config_dir() |
+| `crates/rr-core/src/identity.rs` | Ajouter `KeySource` enum, `from_config()`, `with_key_source()`, 2 backends, `detect_keepassxc_cli()`, `save_to_keepassxc()` |
 | `crates/rr-cli/src/main.rs` | Parse `RR_KEYSTORE`, gère `--kdbx`, warning init, `rr export` |
 | `docs/TRACKING.md` | Marquer EPIC 7 stories ✅ |
 
@@ -172,7 +173,137 @@ rtk git commit -m "deps: add keepass, rpassword, shellexpand"
 
 ---
 
-### Task 4: `KeySource` enum + backends dans identity.rs
+### Task 4: Config.toml + `KeySource::from_config()`
+
+- [ ] **Step 1: Définir le format config**
+
+```rust
+// crates/rr-core/src/config.rs (nouveau fichier)
+use serde::{Deserialize, Serialize};
+use std::path::{Path, PathBuf};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Config {
+    #[serde(default)]
+    pub keystore: KeystoreConfig,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum KeystoreConfig {
+    #[serde(rename = "file")]
+    File,
+    #[serde(rename = "keepassxc")]
+    KeePassXc {
+        db_path: String,
+        entry: String,
+    },
+    #[serde(rename = "keepass-rs")]
+    KeePassRs {
+        db_path: String,
+        entry: String,
+    },
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self { keystore: KeystoreConfig::File }
+    }
+}
+```
+
+- [ ] **Step 2: Lire/écrire le fichier config.toml**
+
+```rust
+impl Config {
+    pub fn config_dir() -> PathBuf {
+        std::env::var("RR_CONFIG_DIR")
+            .map(PathBuf::from)
+            .unwrap_or_else(|| {
+                let base = dirs::config_dir().unwrap_or_else(|| PathBuf::from("~/.config"));
+                base.join("reseau-racine")
+            })
+    }
+
+    pub fn config_path() -> PathBuf {
+        Self::config_dir().join("config.toml")
+    }
+
+    pub fn load() -> Self {
+        let path = Self::config_path();
+        if !path.exists() {
+            return Self::default();
+        }
+        let content = match std::fs::read_to_string(&path) {
+            Ok(c) => c,
+            Err(_) => return Self::default(),
+        };
+        toml::from_str(&content).unwrap_or_default()
+    }
+
+    pub fn save(&self) -> Result<(), Box<dyn std::error::Error>> {
+        let dir = Self::config_dir();
+        std::fs::create_dir_all(&dir)?;
+        let content = toml::to_string_pretty(self)?;
+        std::fs::write(Self::config_path(), content)?;
+        Ok(())
+    }
+}
+```
+
+- [ ] **Step 3: Ajouter `mod config;` dans `lib.rs`**
+
+```rust
+// crates/rr-core/src/lib.rs
+pub mod config;
+```
+
+- [ ] **Step 4: `KeySource::from_config()`**
+
+```rust
+// identity.rs
+impl KeySource {
+    pub fn from_config(config: &Config) -> Self {
+        match &config.keystore {
+            KeystoreConfig::File => Self::File,
+            KeystoreConfig::KeePassXc { db_path, entry } =>
+                Self::KeePassXc { db_path: db_path.clone(), entry: entry.clone() },
+            KeystoreConfig::KeePassRs { db_path, entry } =>
+                Self::KeePassRs { db_path: db_path.clone(), entry: entry.clone() },
+        }
+    }
+}
+```
+
+Trier la priorité (dans `key_source()` dans rr-cli) : `RR_KEYSTORE` env var > `config.toml` > défaut File.
+
+- [ ] **Step 5: Ajouter `serde` + `toml` aux dépendances**
+
+```toml
+# crates/rr-core/Cargo.toml
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+```
+
+- [ ] **Step 6: Compiler**
+
+```bash
+./scripts/dev.sh cargo check --package rr-core
+```
+
+Expected : success
+
+- [ ] **Step 7: Commit**
+
+```bash
+rtk git add crates/rr-core/src/config.rs crates/rr-core/src/lib.rs crates/rr-core/Cargo.toml
+rtk git commit -m "feat: config.toml + KeySource::from_config()"
+```
+
+---
+
+### Task 5: `KeySource` enum + backends dans identity.rs
 
 - [ ] **Step 1: Ajouter les imports et le enum**
 
@@ -208,8 +339,14 @@ impl KeySource {
     }
 
     pub fn detect_keepassxc_cli() -> bool {
-        Command::new("which")
+        let (cmd, flag) = if cfg!(target_os = "windows") {
+            ("where", "/Q")
+        } else {
+            ("which", "")
+        };
+        Command::new(cmd)
             .arg("keepassxc-cli")
+            .arg(flag)
             .output()
             .map(|o| o.status.success())
             .unwrap_or(false)
@@ -384,7 +521,7 @@ rtk git commit -m "feat: KeySource enum, keepassxc-cli and keepass-rs backends, 
 
 ---
 
-### Task 5: Propager RR_KEYSTORE dans rr-cli + `rr init --kdbx`
+### Task 6: Propager RR_KEYSTORE dans rr-cli + `rr init --kdbx`
 
 - [ ] **Step 1: Ajouter `key_source()` helper + `--kdbx` flag à `Init`**
 
@@ -398,7 +535,13 @@ fn data_dir() -> PathBuf {
 }
 
 fn key_source() -> rr_core::identity::KeySource {
-    rr_core::identity::KeySource::from_env()
+    let from_env = rr_core::identity::KeySource::from_env();
+    if !matches!(from_env, rr_core::identity::KeySource::File) {
+        return from_env;
+    }
+    // Fallback : config.toml
+    let config = rr_core::config::Config::load();
+    rr_core::identity::KeySource::from_config(&config)
 }
 ```
 
@@ -420,40 +563,85 @@ enum Commands {
 }
 ```
 
-- [ ] **Step 2: Réécrire `cmd_init` avec support `--kdbx`**
+- [ ] **Step 2: Détection interactive (intégrée dans `cmd_init`)**
+
+La détection interactive est directement intégrée dans `cmd_init` (Step 3). Quand `rr init` est appelé sans `--kdbx` mais que `keepassxc-cli` est détecté dans PATH, l'utilisateur est invité à choisir avant de créer l'identité.
+
+- [ ] **Step 3: Réécrire `cmd_init` avec support `--kdbx` + détection**
 
 ```rust
+use std::io::Write;
+
 async fn cmd_init(kdbx: &Option<String>, entry: &str) {
+    // Détection interactive (si --kdbx non fourni mais keepassxc-cli présent)
+    if kdbx.is_none() && KeySource::detect_keepassxc_cli() {
+        print!("🔑 KeePassXC détecté. Utiliser pour stocker les clés ? [Y/n] ");
+        std::io::stdout().flush().ok();
+        let mut input = String::new();
+        std::io::stdin().read_line(&mut input).ok();
+        if input.trim().is_empty() || input.trim().eq_ignore_ascii_case("y") {
+            print!("Chemin DB [~/vault.kdbx] : ");
+            std::io::stdout().flush().ok();
+            let mut db_path = String::new();
+            std::io::stdin().read_line(&mut db_path).ok();
+            let db_path = if db_path.trim().is_empty() {
+                "~/vault.kdbx".to_string()
+            } else {
+                db_path.trim().to_string()
+            };
+            let identity = Identity::new();
+            let manager = IdentityManager::new(data_dir()).with_key_source(key_source());
+            return cmd_init_kdbx(identity, manager, &db_path, entry).await;
+        }
+    }
+
     let identity = Identity::new();
     let manager = rr_core::identity::IdentityManager::new(data_dir())
         .with_key_source(key_source());
 
     if let Some(db_path) = kdbx {
-        // Mode KeePassXC : sauver dans la DB
-        if let Err(e) = manager.save_to_keepassxc(&identity, db_path, entry) {
-            eprintln!("Erreur sauvegarde KeePassXC: {}", e);
-            return;
-        }
-        println!("✅ Identité créée et stockée dans KeePassXC ({})", db_path);
-        println!("🔑 Pubkey: {}", identity.public_key_bech32());
-        // Sauver aussi en JSON (fallback) + config
-        let _ = manager.save(&identity);
-        println!("💡 Fichier de config créé dans ~/.config/reseau-racine/");
+        cmd_init_kdbx(identity, manager, db_path, entry).await;
     } else {
-        // Mode fichier normal
-        if let Err(e) = manager.save(&identity) {
-            eprintln!("Erreur: {}", e);
-            return;
-        }
-        println!("✅ Identité créée : {}", identity.public_key_bech32());
-        let ks = std::env::var("RR_KEYSTORE").unwrap_or_default();
-        if ks.is_empty() || ks == "file" {
-            println!();
-            println!("⚠️  Clé stockée en clair dans ~/.local/share/reseau-racine/keys.json");
-            println!("⚠️  Pour plus de sécurité, installe KeePassXC et utilise :");
-            println!("💡  rr init --kdbx ~/vault.kdbx");
-            println!("💡  https://keepassxc.org");
-        }
+        cmd_init_file(identity, manager).await;
+    }
+}
+
+async fn cmd_init_kdbx(identity: Identity, manager: IdentityManager, db_path: &str, entry: &str) {
+    // Mode KeePassXC : créer identité + sauver dans la DB
+    if let Err(e) = manager.save_to_keepassxc(&identity, db_path, entry) {
+        eprintln!("Erreur sauvegarde KeePassXC: {}", e);
+        return;
+    }
+    println!("✅ Identité créée et stockée dans KeePassXC ({}/{})", db_path, entry);
+    println!("🔑 Pubkey: {}", identity.public_key_bech32());
+    // Sauver config.toml (pas de fallback JSON — ça irait contre le but)
+    let config = rr_core::config::Config {
+        keystore: rr_core::config::KeystoreConfig::KeePassXc {
+            db_path: db_path.to_string(),
+            entry: entry.to_string(),
+        },
+    };
+    if let Err(e) = config.save() {
+        eprintln!("⚠️  Config non sauvegardée : {}", e);
+    } else {
+        println!("💡 Configuration sauvegardée dans ~/.config/reseau-racine/config.toml");
+    }
+}
+
+async fn cmd_init_file(identity: Identity, manager: IdentityManager) {
+    // Mode fichier normal
+    if let Err(e) = manager.save(&identity) {
+        eprintln!("Erreur: {}", e);
+        return;
+    }
+    println!("✅ Identité créée : {}", identity.public_key_bech32());
+    let ks = std::env::var("RR_KEYSTORE").unwrap_or_default();
+    if ks.is_empty() || ks == "file" {
+        println!();
+        println!("⚠️  Clé stockée en clair dans ~/.local/share/reseau-racine/keys.json");
+        println!("⚠️  Pour plus de sécurité, installe KeePassXC et utilise :");
+        println!("💡  rr init --kdbx ~/vault.kdbx");
+        println!("💡  https://keepassxc.org");
     }
 }
 ```
@@ -516,7 +704,7 @@ rtk git commit -m "feat: rr init --kdbx, RR_KEYSTORE propagation to all commands
 
 ---
 
-### Task 6: `rr export` — migrer identité existante vers KeePassXC
+### Task 7: `rr export` — migrer identité existante vers KeePassXC
 
 - [ ] **Step 1: Ajouter la sous-commande `Export`**
 
@@ -587,7 +775,7 @@ rtk git commit -m "feat: add rr export command for KeePassXC migration"
 
 ---
 
-### Task 7: Tests et vérification finale
+### Task 8: Tests et vérification finale
 
 - [ ] **Step 1: Tous les tests**
 
@@ -624,7 +812,7 @@ rtk git add -A && rtk git commit -m "test: full test suite + retro-compat verifi
 
 ## Auto-review
 
-- [x] Spec coverage : distribution (CI release), warning init, KeySource enum, 2 backends, rr init --kdbx, rr export, tests — tout couvert
+- [x] Spec coverage : distribution (CI release), warning init, Config + from_config, KeySource enum, 2 backends, rr init --kdbx, rr export, tests — tout couvert
 - [x] Placeholders : aucun TBD/TODO — code concret partout
-- [x] Type consistency : KeySource::from_env() → with_key_source() → load() cohérent
-- [x] Gaps : zeroize (spécifié optionnel), config.toml (Phase 3, YAGNI pour l'instant)
+- [x] Type consistency : env > config.toml > File — priorité claire
+- [x] Gaps corrigés : config.toml déplacé en Phase 2 (spec required), cross-platform detect (which/where), --kdbx sauve config au lieu de JSON fallback

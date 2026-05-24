@@ -102,37 +102,53 @@ Par défaut, ta clé privée (nsec) est stockée dans un fichier JSON sur ton di
 
 C'est un coffre-fort chiffré. Ta clé nsec y est protégée par un mot de passe maître. Même si ton ordinateur est volé, personne ne peut lire tes messages.
 
-### Installation
-
-Télécharge KeePassXC sur [keepassxc.org/download](https://keepassxc.org/download).
-
-### Créer ton identité directement dans KeePassXC
+### 1. Installer KeePassXC
 
 ```bash
-# Crée une base KeePassXC (si tu n'en as pas)
-keepassxc-cli db-create -p ~/vault.kdbx
+# Linux (Ubuntu/Debian)
+sudo apt install keepassxc
 
-# Crée ton identité et stocke-la dans KeePassXC
-rr init --kdbx ~/vault.kdbx
+# Linux (Fedora)
+sudo dnf install keepassxc
+
+# macOS
+brew install --cask keepassxc
+
+# Windows
+winget install -e --id KeePassXCTeam.KeePassXC
 ```
 
-À partir de maintenant, utilise :
+Tu peux aussi télécharger l'installateur depuis [keepassxc.org/download](https://keepassxc.org/download).
+
+### 2. Créer ta base de données
+
+Lance KeePassXC, clique sur **Create new database** :
+
+1. Choisis un nom (ex: "Vault") et un emplacement (ex: `~/Documents/vault.kdbx`)
+2. Définis ton mot de passe maître — une phrase longue et unique que tu peux retenir
+3. Termine le wizard
+
+Tu as maintenant un fichier `.kdbx` chiffré. Garde-le précieusement, fais des backups.
+
+### 3. Initialiser ton identité dans KeePassXC
 
 ```bash
-export RR_KEYSTORE=keepassxc://~/vault.kdbx/Nostr/Identity
-rr send alice "hello"
+rr init --kdbx ~/Documents/vault.kdbx --entry Nostr/Identity
 ```
 
-KeePassXC te demandera ton mot de passe maître à chaque utilisation.
+KeePassXC te demande ton mot de passe maître. `rr` crée une identité fraîche et la stocke dans la case "Nostr/Identity".
+
+Désormais, plus besoin de `RR_KEYSTORE` — la config est sauvegardée automatiquement. `rr send` et `rr sync` utiliseront KeePassXC sans autre intervention.
 
 ### Migrer une identité existante vers KeePassXC
 
 ```bash
-# Tu as déjà fait rr init ? Pas grave :
-rr export --kdbx ~/vault.kdbx
+# Tu as déjà fait rr init sans KeePassXC ? Pas grave :
+rr export --kdbx ~/Documents/vault.kdbx --entry Nostr/Identity
 
-# Puis active le vault
-export RR_KEYSTORE=keepassxc://~/vault.kdbx/Nostr/Identity
+# Puis bascule la config
+rr init --kdbx ~/Documents/vault.kdbx --entry Nostr/Identity
+# → détecte que l'entrée existe déjà, crée juste le fichier de config
 ```
 
 ## Dépannage

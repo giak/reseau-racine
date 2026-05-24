@@ -55,6 +55,38 @@ Le job `build-cli` existant compile déjà `--release --package rr-cli`. Il faut
 
 ## Workflow utilisateur complet
 
+### Setup : Installer KeePassXC
+
+L'utilisateur installe KeePassXC avec une commande, puis crée sa base de données via le GUI.
+
+```bash
+# Linux (Ubuntu/Debian)
+sudo apt install keepassxc
+
+# Linux (Fedora)
+sudo dnf install keepassxc
+
+# macOS
+brew install --cask keepassxc
+
+# Windows
+winget install -e --id KeePassXCTeam.KeePassXC
+
+# Sinon : https://keepassxc.org/download
+```
+
+`keepassxc-cli` est inclus automatiquement dans tous ces paquets.
+
+**Créer la base de données :**
+
+1. Lance KeePassXC
+2. Clique **Create new database**
+3. Choisis un emplacement (ex: `~/vault.kdbx`) — où tu veux, le fichier est chiffré
+4. Définis un **mot de passe maître** fort (phrase longue, unique)
+5. Termine le wizard
+
+Le résultat est un fichier `.kdbx` — c'est ton coffre-fort. Tu peux le backup n'importe où (Dropbox, Syncthing, clé USB), le fichier est chiffré en AES-256.
+
 ### Scénario A — Utilisateur sans KeePassXC
 
 ```bash
@@ -81,16 +113,13 @@ rr sync
 
 ```bash
 # 1. Installer rr + avoir KeePassXC installé
-# 2. Créer une entrée Nostr dans KeePassXC
-#    - Groupe : Nostr
-#    - Titre : Identity
-#    - Password : nsec généré par rr
 
-# 3. Initialiser avec la DB KeePassXC
+# 2. Initialiser avec la DB KeePassXC (crée l'identité automatiquement)
 rr init --kdbx ~/vault.kdbx --entry Nostr/Identity
-# → Détecte keepassxc-cli dans PATH
-# → Demande master password (via keepassxc-cli)
-# → Génère une identité, la sauvegarde DANS KeePassXC (Password)
+# → Détecte keepassxc-cli dans PATH (ou keepass-rs si absent)
+# → Demande master password (via keepassxc-cli ou rpassword)
+# → Génère une identité, la sauvegarde DANS KeePassXC (Password field)
+# → Si l'entrée existe déjà dans la DB, ne la remplace pas
 # → Crée un fichier de config ~/.config/reseau-racine/config.toml
 #   [keystore]
 #   type = "keepassxc"
@@ -100,10 +129,14 @@ rr init --kdbx ~/vault.kdbx --entry Nostr/Identity
 #   ✅ Identité créée et stockée dans KeePassXC
 #   ℹ️  Utilise keepassxc-cli pour déverrouiller
 
-# 4. Utiliser (plus besoin de RR_KEYSTORE)
+# 3. Utiliser (plus besoin de RR_KEYSTORE)
 rr send bob "hello"
-# → Lit config, voit keepassxc → lance keepassxc-cli
+# → key_source() lit config.toml → voit keepassxc → lance keepassxc-cli
 ```
+
+Si l'utilisateur préfère créer l'entrée manuellement dans KeePassXC :
+- Groupe : Nostr / Titre : Identity / Password : nsec généré par `rr init` (sans --kdbx)
+- Puis `rr init --kdbx ~/vault.kdbx --entry Nostr/Identity` détecte l'existence et ne crée que la config
 
 ### Scénario C — Migration clé existante vers KeePassXC
 
@@ -195,6 +228,18 @@ flowchart TD
     CFG_KS --> BACKENDS
 ```
 
+## Priorité de résolution
+
+```
+1. RR_KEYSTORE env var          → utilisé directement
+2. config.toml                   → sinon, charge le fichier
+3. File (défaut)                 → sinon, stockage clair historique
+```
+
+## Portabilité
+
+`detect_keepassxc_cli()` utilise `which` sur Linux/macOS et `where /Q` sur Windows (via `cfg!(target_os = "windows")`).
+
 ## RR_KEYSTORE format
 
 | Valeur | Backend | Exemple |
@@ -222,6 +267,18 @@ Le `type = "file"` dans config.toml est redondant avec l'absence de fichier — 
 ## API — Changements dans `rr-core`
 
 ```rust
+// config.rs (nouveau)
+pub struct Config {
+    pub keystore: KeystoreConfig,
+}
+pub enum KeystoreConfig { File, KeePassXc { db_path, entry }, KeePassRs { db_path, entry } }
+impl Config {
+    pub fn config_dir() -> PathBuf;
+    pub fn config_path() -> PathBuf;
+    pub fn load() -> Self;
+    pub fn save(&self) -> Result<()>;
+}
+
 // identity.rs
 pub enum KeySource {
     File,
@@ -231,7 +288,7 @@ pub enum KeySource {
 
 impl KeySource {
     pub fn from_env() -> Self;
-    pub fn from_config(path: &Path) -> Option<Self>;
+    pub fn from_config(config: &Config) -> Self;
     pub fn detect_keepassxc_cli() -> bool;
 }
 
@@ -263,20 +320,18 @@ rr export --kdbx ~/vault.kdbx --entry Nostr/Identity
 
 ## Plan d'implémentation
 
-### Phase 1 (immédiat) : Distribution + keystore file uniquement
-1. CI release (cross-compile + GitHub Release)
-2. `cargo publish` pour `cargo install`
-3. Avertissement clés en clair dans `rr init`
-4. Fichier `config.toml` basique
+**8 tâches dans le plan détaillé :** `docs/superpowers/plans/2026-05-23-epic7-keepassxc-vault.md`
 
-### Phase 2 (courte) : Backend keepassxc-cli
-5. `KeySource::from_env()` + `load()` → keepassxc-cli
-6. `rr init --kdbx` avec création d'entrée
-7. `rr export`
-
-### Phase 3 (optionnelle) : Backend keepass-rs
-8. Backend Rust natif (sans keepassxc-cli)
-9. Prompt master password via rpassword
+| Task | Description |
+|------|-------------|
+| 1 | CI release (cross-compile + GitHub Release) |
+| 2 | Avertissement clés en clair dans `rr init` |
+| 3 | Dépendances (`keepass`, `shellexpand`, `serde`, `toml`) |
+| 4 | `config.toml` — struct Config, load/save, `from_config()` |
+| 5 | `KeySource` enum + backends keepassxc-cli et keepass-rs |
+| 6 | `rr init --kdbx` + détection interactive keepassxc-cli |
+| 7 | `rr export` — migrer identité existante vers KeePassXC |
+| 8 | Tests + vérification finale
 
 ## Dépendances
 
@@ -285,9 +340,14 @@ rr export --kdbx ~/vault.kdbx --entry Nostr/Identity
 - `shellexpand = "3"` — expansion `~` dans les chemins
 - CI : `taiki-e/upload-rust-binary-action` — cross-compile + GitHub Release
 
-## Non-faits (YAGNI)
+## Non-faits (YAGNI) & alternatives écartées
 
-- Pas d'intégration OS keychain (keepassxc-cli + kpxc-run couvre)
+- **`pass` (password-store)** — viable (GPG files, offline), mais Linux/macOS only. Pas de Windows natif. Écarté.
+- **Bitwarden CLI (`bw`)** — cloud-sync obligatoire (même self-hosted), nécessite login session + 2FA. Trop lourd pour 1 nsec. Écarté.
+- **OS keychain** (Secret Service, macOS Keychain, Credential Manager) — 3 APIs natives différentes, zéro portabilité, maintenance lourde. Écarté.
+- **1Password CLI (`op`)** — payant, propriétaire. Écarté.
+- **OpenPass / kyp** (2026) — trop récents, pas de masse critique. À surveiller.
+- Pas d'intégration OS keychain — `keepassxc-cli` + `kpxc-run` couvre les cas d'usage
 - Pas de NIP-46 bunker
 - Pas de chiffrement au repos Rust natif (c'est le rôle de KeePassXC)
 - Pas d'auto-détection de la DB KeePassXC (scan de dossiers)
