@@ -13,7 +13,7 @@
 ░░░░░░░░░░  EPIC 5  — Forward Secrecy         ⬜  —
 ░░░░░░░░░░  EPIC 6  — Nœud relais             ⬜  —
 ████████░░  EPIC 7  — Sécurité CLI            ✅  4/4   KeePassXC vault
-░░░░░░░░░░  EPIC 8  — Performance             ⬜  —  Benchmarks système
+██████████  EPIC 8  — Performance             ✅  4/4   Benchmarks système
 ░░░░░░░░░░  EPIC 9  — Simulation charge       ⬜  —  rr-stress load testing
 ```
 
@@ -228,18 +228,36 @@ Vault KeePassXC pour clés Nostr, remove storage JSON en clair.
 
 ---
 
-## EPIC 8 — Performance ⬜
+## EPIC 8 — Performance ✅ (4/4)
 
-Benchmarks système pour mesurer latences et débit.
+Benchmarks système : latences et débit crypto + transport.
 
 | Story | Status | Détail |
 |-------|--------|--------|
-| Bench crypto pure (criterion) | ⬜ | NIP-44 encrypt/decrypt, event sign, full roundtrip |
-| Bench transport (relais local Docker) | ⬜ | Publish single/batch, sync single/load |
-| `rr bench` sous-commande CLI | ⬜ | Wrapper CLI pour les benchs |
-| Crypto bench en CI | ⬜ | Benchmarks déterministes en CI |
+| Bench crypto pure (criterion) | ✅ | 10 métriques : nip44 encrypt/decrypt, event_sign, giftwrap_roundtrip (×3 sizes) |
+| Bench transport (relais local Docker) | ✅ | 7 métriques : publish single/batch 1/10/100, sync single/load 1/10/100 |
+| `rr bench` sous-commande CLI | ✅ | --crypto-only, --transport-only, --relay |
+| Crypto bench + regression check en CI | ✅ | Criterion standard mode, grep "Performance has regressed" → exit 1 |
 
-**Spec :** `docs/superpowers/specs/2026-05-23-performance-benchmarking.md`
+### Qualité
+
+| Métrique | Status |
+|----------|--------|
+| Tests | ✅ 37/37 (31 unit + 3 integ + 3 proptest) |
+| Clippy | ✅ 0 warnings |
+| Fmt | ✅ clean |
+
+### Architecture
+
+| Composant | Fichier | Rôle |
+|-----------|---------|------|
+| Crypto benchmarks | `crates/rr-core/benches/crypto.rs` | 4 groups, criterion + FuturesExecutor |
+| Transport benchmarks | `crates/rr-core/benches/transport.rs` | 4 groups, criterion + tokio Runtime |
+| CLI bench | `crates/rr-cli/src/main.rs` | `rr bench`, `cmd_bench()`, `check_relay()` |
+| CI | `.github/workflows/ci.yml` | job bench, baseline cached, regression grep |
+
+**Specs :** `docs/superpowers/specs/2026-05-23-performance-benchmarking.md`, `docs/superpowers/specs/2026-05-24-epic8-post-merge-fixes.md`
+**Plan :** `docs/superpowers/plans/2026-05-24-epic8-performance-benchmarks.md`
 
 ---
 

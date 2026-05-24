@@ -21,3 +21,13 @@ dirs.workspace = true
 [dev-dependencies]
 proptest.workspace = true
 serial_test.workspace = true
+tokio.workspace = true
+criterion = { version = "0.8", features = ["html_reports", "async_futures"] }
+
+[[bench]]
+name = "crypto"
+harness = false
+
+[[bench]]
+name = "transport"
+harness = false

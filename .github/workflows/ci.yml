@@ -67,6 +67,30 @@ jobs:
           name: rr-cli-linux
           path: target/release/rr
 
+  bench:
+    name: bench
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+      - name: Restore baseline cache
+        uses: actions/cache@v4
+        with:
+          path: target/criterion
+          key: bench-crypto-${{ github.sha }}
+          restore-keys: bench-crypto-
+      - name: Run benchmarks
+        run: cargo bench --bench crypto 2>&1 | tee bench-output.txt
+      - name: Check for regression
+        run: |
+          if grep -q "Performance has regressed" bench-output.txt; then
+            echo "❌ Performance regression >5% detected!"
+            grep -B2 "regressed" bench-output.txt
+            exit 1
+          fi
+          echo "✅ No significant performance changes"
+
   udeps:
     name: udeps
     runs-on: ubuntu-latest
@@ -169,7 +193,7 @@ jobs:
   release:
     name: release
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [lint, test, audit, fuzz, udeps, build-cli]
+    needs: [lint, test, audit, fuzz, udeps, build-cli, bench]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
