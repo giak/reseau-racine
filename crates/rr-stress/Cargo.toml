@@ -1,0 +1,15 @@
+[package]
+name = "rr-stress"
+version = "0.1.0"
+description = "RéseauRacine load simulation tool"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+nostr.workspace = true
+nostr-sdk.workspace = true
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true

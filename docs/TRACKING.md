@@ -14,7 +14,7 @@
 ░░░░░░░░░░  EPIC 6  — Nœud relais             ⬜  —
 ████████░░  EPIC 7  — Sécurité CLI            ✅  4/4   KeePassXC vault
 ██████████  EPIC 8  — Performance             ✅  4/4   Benchmarks système
-░░░░░░░░░░  EPIC 9  — Simulation charge       ⬜  —  rr-stress load testing
+██████████  EPIC 9  — Simulation charge       ✅  4/4   rr-stress load testing
 ```
 
 ---
@@ -258,6 +258,46 @@ Benchmarks système : latences et débit crypto + transport.
 
 **Specs :** `docs/superpowers/specs/2026-05-23-performance-benchmarking.md`, `docs/superpowers/specs/2026-05-24-epic8-post-merge-fixes.md`
 **Plan :** `docs/superpowers/plans/2026-05-24-epic8-performance-benchmarks.md`
+
+---
+
+## EPIC 9 — Simulation Charge ✅ (4/4)
+
+Outil de stress test `rr-stress` pour valider le comportement sous charge.
+
+| Story | Status | Détail |
+|-------|--------|--------|
+| Binaire `rr-stress` séparé | ✅ | `crates/rr-stress/`, dépendances workspace |
+| Phase Hello + Chat | ✅ | Envois périodiques, destinataires aléatoires (i+1)%n |
+| Métriques (success, latence p50/p95/p99, erreurs) | ✅ | Output JSON + table recap |
+| Test 5 users × 3 msgs validé | ✅ | 15/15 success, p50 1.8ms, p95 7.4ms |
+
+### Exemple
+
+```json
+{
+  "users": 5,
+  "total_messages": 15,
+  "success": 15,
+  "failed": 0,
+  "latency_ms": { "p50": 1.8, "p95": 7.4, "p99": 7.6 },
+  "errors": { "timeout": 0, "reject": 0, "disconnect": 0 },
+  "duration_sec": 0.32,
+  "throughput_msg_s": 46.8
+}
+```
+
+### Architecture
+
+| Composant | Fichier | Rôle |
+|-----------|---------|------|
+| Identités déterministes | `crates/rr-stress/src/main.rs` | SHA256 du seed index → Keys |
+| Clients connexion | `crates/rr-stress/src/main.rs` | client.connect() + wait_for_connection |
+| Phases envoi | `crates/rr-stress/src/main.rs` | Semaphore(parallelism), tokio::spawn |
+| Collecte métriques | `crates/rr-stress/src/main.rs` | AtomicU64 + Mutex, p50/p95/p99 |
+
+**Spec :** `docs/superpowers/specs/2026-05-23-stress-load-simulation.md`
+**Plan :** `docs/superpowers/plans/2026-05-24-epic9-stress-load-simulation.md`
 
 ---
 

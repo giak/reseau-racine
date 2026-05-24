@@ -3556,6 +3556,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "rr-stress"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "nostr",
+ "nostr-sdk",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "rr-tauri"
 version = "0.1.0"
 dependencies = [
