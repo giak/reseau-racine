@@ -1,3 +1,4 @@
+use crate::config::{Config, KeystoreConfig};
 use bip39::Mnemonic;
 use nostr::nips::nip06;
 use nostr::nips::nip06::FromMnemonic;
@@ -7,6 +8,46 @@ use nostr::{Keys, PublicKey, SecretKey};
 use std::fmt;
 use std::path::PathBuf;
 use std::str::FromStr;
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum KeySource {
+    File,
+    KeePassXc { db_path: String, entry: String },
+    KeePassRs { db_path: String, entry: String },
+}
+
+impl KeySource {
+    pub fn from_env() -> Self {
+        match std::env::var("RR_KEYSTORE") {
+            Ok(val) if val == "file" || val.is_empty() => KeySource::File,
+            Ok(val) if val.starts_with("keepassxc://") => {
+                let rest = val.trim_start_matches("keepassxc://");
+                let Some((db_path, entry)) = rest.split_once('/') else {
+                    return KeySource::KeePassXc { db_path: rest.to_string(), entry: String::new() };
+                };
+                KeySource::KeePassXc { db_path: db_path.to_string(), entry: entry.to_string() }
+            }
+            Ok(val) if val.starts_with("keepass-rs://") => {
+                let rest = val.trim_start_matches("keepass-rs://");
+                let Some((db_path, entry)) = rest.split_once('/') else {
+                    return KeySource::KeePassRs { db_path: rest.to_string(), entry: String::new() };
+                };
+                KeySource::KeePassRs { db_path: db_path.to_string(), entry: entry.to_string() }
+            }
+            _ => KeySource::File,
+        }
+    }
+
+    pub fn from_config(config: &Config) -> Self {
+        match &config.keystore {
+            KeystoreConfig::File => Self::File,
+            KeystoreConfig::KeePassXc { db_path, entry } =>
+                Self::KeePassXc { db_path: db_path.clone(), entry: entry.clone() },
+            KeystoreConfig::KeePassRs { db_path, entry } =>
+                Self::KeePassRs { db_path: db_path.clone(), entry: entry.clone() },
+        }
+    }
+}
 
 pub struct Identity {
     keys: Keys,
