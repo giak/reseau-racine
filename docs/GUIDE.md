@@ -146,10 +146,19 @@ Désormais, plus besoin de `RR_KEYSTORE` — la config est sauvegardée automati
 # Tu as déjà fait rr init sans KeePassXC ? Pas grave :
 rr export --kdbx ~/Documents/vault.kdbx --entry Nostr/Identity
 
-# Puis bascule la config
-rr init --kdbx ~/Documents/vault.kdbx --entry Nostr/Identity
-# → détecte que l'entrée existe déjà, crée juste le fichier de config
+# Active KeePassXC pour les prochaines commandes :
+export RR_KEYSTORE=keepassxc://~/Documents/vault.kdbx/Nostr/Identity
+
+# Ou de façon permanente : crée le fichier de config manuellement
+# dans ~/.config/reseau-racine/config.toml
+#
+# [keystore]
+# type = "keepassxc"
+# db_path = "~/Documents/vault.kdbx"
+# entry = "Nostr/Identity"
 ```
+
+> ⚠️ Ne relance pas `rr init --kdbx` après `rr export` — ça créerait une **nouvelle** identité différente. Utilise `RR_KEYSTORE` ou la config comme ci-dessus.
 
 ## Dépannage
 
