@@ -20,13 +20,8 @@ fn bench_nip44_encrypt(c: &mut Criterion) {
             b.to_async(FuturesExecutor).iter(move || {
                 let content = content.clone();
                 async move {
-                    nip44::encrypt(
-                        black_box(&sk),
-                        black_box(&pk),
-                        &content,
-                        nip44::Version::V2,
-                    )
-                    .unwrap()
+                    nip44::encrypt(black_box(sk), black_box(&pk), &content, nip44::Version::V2)
+                        .unwrap()
                 }
             })
         });
@@ -41,17 +36,19 @@ fn bench_nip44_decrypt(c: &mut Criterion) {
     let mut group = c.benchmark_group("nip44_decrypt");
     for size in [64u64, 1024, 65408] {
         let content = "A".repeat(size as usize);
-        let ciphertext =
-            nip44::encrypt(alice.secret_key(), &bob.public_key(), &content, nip44::Version::V2)
-                .unwrap();
+        let ciphertext = nip44::encrypt(
+            alice.secret_key(),
+            &bob.public_key(),
+            &content,
+            nip44::Version::V2,
+        )
+        .unwrap();
         group.throughput(Throughput::Bytes(size));
         group.bench_with_input(BenchmarkId::from_parameter(size), &ciphertext, |b, ct| {
             let ct = ct.clone();
             b.to_async(FuturesExecutor).iter(move || {
                 let ct = ct.clone();
-                async move {
-                    nip44::decrypt(black_box(&sk), black_box(&pk), &ct).unwrap()
-                }
+                async move { nip44::decrypt(black_box(sk), black_box(&pk), &ct).unwrap() }
             })
         });
     }
@@ -87,19 +84,13 @@ fn bench_giftwrap_roundtrip(c: &mut Criterion) {
                 let alice = b_alice.clone();
                 let bob = b_bob.clone();
                 async move {
-                    let rumor = EventBuilder::new(Kind::PrivateDirectMessage, &content)
-                        .build(alice_pk);
-                    let gift_wrap = EventBuilder::gift_wrap(
-                        &alice,
-                        &bob_pk,
-                        rumor,
-                        Vec::<Tag>::new(),
-                    )
-                    .await
-                    .unwrap();
-                    nip59::extract_rumor(&bob, &gift_wrap)
-                        .await
-                        .unwrap();
+                    let rumor =
+                        EventBuilder::new(Kind::PrivateDirectMessage, &content).build(alice_pk);
+                    let gift_wrap =
+                        EventBuilder::gift_wrap(&alice, &bob_pk, rumor, Vec::<Tag>::new())
+                            .await
+                            .unwrap();
+                    nip59::extract_rumor(&bob, &gift_wrap).await.unwrap();
                 }
             })
         });
