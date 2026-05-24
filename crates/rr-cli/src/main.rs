@@ -3,7 +3,8 @@ use nostr::nips::nip19::{FromBech32, ToBech32};
 use nostr::nips::nip59::UnwrappedGift;
 use nostr::{Kind, PublicKey};
 use nostr_sdk::{Filter, RelayPoolNotification};
-use rr_core::identity::Identity;
+use rr_core::config::Config;
+use rr_core::identity::{Identity, IdentityManager, KeySource};
 use rr_core::message::MessageService;
 use rr_core::transport::nostr::NostrTransport;
 use std::io::{self, Write};
@@ -12,7 +13,16 @@ use std::path::PathBuf;
 fn data_dir() -> PathBuf {
     std::env::var("RR_DATA_DIR")
         .map(PathBuf::from)
-        .unwrap_or_else(|_| rr_core::identity::IdentityManager::default_data_dir())
+        .unwrap_or_else(|_| IdentityManager::default_data_dir())
+}
+
+fn key_source() -> KeySource {
+    let from_env = KeySource::from_env();
+    if !matches!(from_env, KeySource::File) {
+        return from_env;
+    }
+    let config = Config::load();
+    KeySource::from_config(&config)
 }
 
 #[derive(Parser)]
@@ -25,7 +35,14 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     /// Initialiser une identité
-    Init,
+    Init {
+        /// Chemin vers une base KeePassXC (.kdbx)
+        #[arg(long)]
+        kdbx: Option<String>,
+        /// Entrée dans la base KeePassXC (défaut: Nostr/Identity)
+        #[arg(long, default_value = "Nostr/Identity")]
+        entry: String,
+    },
     /// Afficher l'identité courante
     Identity,
     /// Ajouter un contact
@@ -45,7 +62,7 @@ async fn main() {
     let cli = Cli::parse();
 
     match &cli.command {
-        Commands::Init => cmd_init().await,
+        Commands::Init { kdbx, entry } => cmd_init(kdbx, entry).await,
         Commands::Identity => cmd_identity().await,
         Commands::AddContact { npub, name } => cmd_add_contact(npub, name).await,
         Commands::Contacts => cmd_contacts().await,
@@ -55,13 +72,37 @@ async fn main() {
     }
 }
 
-async fn cmd_init() {
+async fn cmd_init(kdbx: &Option<String>, entry: &str) {
+    if kdbx.is_none() && KeySource::detect_keepassxc_cli() {
+        print!("🔑 KeePassXC détecté. Utiliser pour stocker les clés ? [Y/n] ");
+        io::stdout().flush().ok();
+        let mut input = String::new();
+        io::stdin().read_line(&mut input).ok();
+        if input.trim().is_empty() || input.trim().eq_ignore_ascii_case("y") {
+            print!("Chemin DB [~/vault.kdbx] : ");
+            io::stdout().flush().ok();
+            let mut db_path = String::new();
+            io::stdin().read_line(&mut db_path).ok();
+            let db_path = if db_path.trim().is_empty() {
+                "~/vault.kdbx".to_string()
+            } else {
+                db_path.trim().to_string()
+            };
+            let identity = Identity::new();
+            let manager = IdentityManager::new(data_dir()).with_key_source(key_source());
+            return cmd_init_kdbx(identity, manager, &db_path, entry).await;
+        }
+    }
+
     let identity = Identity::new();
-    let manager = rr_core::identity::IdentityManager::new(data_dir());
-    if let Err(e) = manager.save(&identity) {
-        eprintln!("Erreur: {}", e);
+    let manager = IdentityManager::new(data_dir()).with_key_source(key_source());
+
+    if let Some(db_path) = kdbx {
+        cmd_init_kdbx(identity, manager, db_path, entry).await;
         return;
     }
+
+    // Mode fichier
     let phrase = match Identity::generate_seed_phrase() {
         Ok(p) => p,
         Err(e) => {
@@ -70,18 +111,17 @@ async fn cmd_init() {
         }
     };
 
-    println!("✅ Identité créée");
-    println!("npub: {}", identity.public_key_bech32());
-    println!();
+    if let Err(e) = manager.save(&identity) {
+        eprintln!("Erreur: {}", e);
+        return;
+    }
+    println!("✅ Identité créée : {}", identity.public_key_bech32());
 
-    print!("⚠️  La seed phrase suivante est votre SEULE sauvegarde. Prêt à voir ? (oui/non) : ");
+    print!("⚠️  SEULE sauvegarde. Voir la seed phrase ? (oui/non) : ");
     io::stdout().flush().ok();
     let mut input = String::new();
     if io::stdin().read_line(&mut input).is_ok()
-        && matches!(
-            input.trim().to_lowercase().as_str(),
-            "oui" | "o" | "y" | "yes"
-        )
+        && matches!(input.trim().to_lowercase().as_str(), "oui" | "o" | "y" | "yes")
     {
         println!();
         println!("SEED PHRASE (notez ces 12 mots sur papier, pas de fichier numérique) :");
@@ -90,19 +130,35 @@ async fn cmd_init() {
     }
 
     println!("Stockée dans: {:?}", data_dir().join("keys.json"));
+    println!();
+    println!("⚠️  Clé stockée en clair sur le disque.");
+    println!("⚠️  Pour plus de sécurité, installe KeePassXC et utilise :");
+    println!("💡  rr init --kdbx ~/vault.kdbx");
+    println!("💡  https://keepassxc.org");
+}
 
-    let keystore = std::env::var("RR_KEYSTORE").unwrap_or_default();
-    if keystore.is_empty() || keystore == "file" {
-        println!();
-        println!("⚠️  Clé stockée en clair sur le disque.");
-        println!("⚠️  Pour plus de sécurité, installe KeePassXC et utilise :");
-        println!("💡  rr init --kdbx ~/vault.kdbx");
-        println!("💡  https://keepassxc.org");
+async fn cmd_init_kdbx(identity: Identity, manager: IdentityManager, db_path: &str, entry: &str) {
+    if let Err(e) = manager.save_to_keepassxc(&identity, db_path, entry) {
+        eprintln!("Erreur sauvegarde KeePassXC: {}", e);
+        return;
+    }
+    println!("✅ Identité créée et stockée dans KeePassXC ({}/{})", db_path, entry);
+    println!("🔑 Pubkey: {}", identity.public_key_bech32());
+    let config = Config {
+        keystore: rr_core::config::KeystoreConfig::KeePassXc {
+            db_path: db_path.to_string(),
+            entry: entry.to_string(),
+        },
+    };
+    if let Err(e) = config.save() {
+        eprintln!("⚠️  Config non sauvegardée : {}", e);
+    } else {
+        println!("💡 Configuration sauvegardée dans ~/.config/reseau-racine/config.toml");
     }
 }
 
 async fn cmd_identity() {
-    let manager = rr_core::identity::IdentityManager::new(data_dir());
+    let manager = IdentityManager::new(data_dir()).with_key_source(key_source());
     match manager.load() {
         Ok(identity) => {
             println!("npub: {}", identity.public_key_bech32());
@@ -183,7 +239,7 @@ async fn cmd_contacts() {
 
 async fn cmd_send(contact: &str, message: &str) {
     // Charger l'identité
-    let manager = rr_core::identity::IdentityManager::new(data_dir());
+    let manager = IdentityManager::new(data_dir()).with_key_source(key_source());
     let identity = match manager.load() {
         Ok(id) => id,
         Err(e) => {
@@ -269,7 +325,7 @@ async fn cmd_sync() {
     let data_dir = data_dir();
 
     // Charger l'identité
-    let manager = rr_core::identity::IdentityManager::new(&data_dir);
+    let manager = IdentityManager::new(&data_dir).with_key_source(key_source());
     let identity = match manager.load() {
         Ok(id) => id,
         Err(e) => {
