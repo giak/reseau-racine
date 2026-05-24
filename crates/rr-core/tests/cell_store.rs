@@ -4,9 +4,7 @@ use std::str::FromStr;
 use uuid::Uuid;
 
 fn dummy_pk() -> PublicKey {
-    PublicKey::from_str(
-        "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
-    ).unwrap()
+    PublicKey::from_str("79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798").unwrap()
 }
 
 #[test]
@@ -26,7 +24,11 @@ fn test_cell_roundtrip() {
 
 #[test]
 fn test_cell_store_find() {
-    let cell = Cell::new("find-me", "deadbeef".to_string(), vec![CellMember::new(dummy_pk(), None)]);
+    let cell = Cell::new(
+        "find-me",
+        "deadbeef".to_string(),
+        vec![CellMember::new(dummy_pk(), None)],
+    );
     let id = cell.id;
     let mut store = CellStore::default();
     store.add(cell);
@@ -36,7 +38,11 @@ fn test_cell_store_find() {
 
 #[test]
 fn test_cell_store_add_remove() {
-    let cell = Cell::new("tmp", "key".to_string(), vec![CellMember::new(dummy_pk(), None)]);
+    let cell = Cell::new(
+        "tmp",
+        "key".to_string(),
+        vec![CellMember::new(dummy_pk(), None)],
+    );
     let id = cell.id;
     let mut store = CellStore::default();
     store.add(cell);
@@ -47,12 +53,19 @@ fn test_cell_store_add_remove() {
 
 #[test]
 fn test_cell_store_update_members() {
-    let cell = Cell::new("growing", "key".to_string(), vec![CellMember::new(dummy_pk(), None)]);
+    let cell = Cell::new(
+        "growing",
+        "key".to_string(),
+        vec![CellMember::new(dummy_pk(), None)],
+    );
     let id = cell.id;
     let mut store = CellStore::default();
     store.add(cell);
     let new_member = CellMember::new(dummy_pk(), Some("Bob".to_string()));
     assert!(store.update_members(&id, vec![new_member]));
     assert_eq!(store.find(&id).unwrap().members.len(), 1);
-    assert_eq!(store.find(&id).unwrap().members[0].label.as_deref(), Some("Bob"));
+    assert_eq!(
+        store.find(&id).unwrap().members[0].label.as_deref(),
+        Some("Bob")
+    );
 }

@@ -16,7 +16,11 @@ impl CellMember {
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()
             .as_secs();
-        Self { pubkey, label, added_at_secs: now }
+        Self {
+            pubkey,
+            label,
+            added_at_secs: now,
+        }
     }
 }
 
