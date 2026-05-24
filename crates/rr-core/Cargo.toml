@@ -20,4 +20,3 @@ dirs.workspace = true
 
 [dev-dependencies]
 proptest.workspace = true
-serial_test.workspace = true

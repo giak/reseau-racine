@@ -235,12 +235,11 @@ impl IdentityManager {
         entry: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let expanded = shellexpand::tilde(db_path).to_string();
-        let db_password = rpassword::prompt_password("KeePass master password: ")?;
         let nsec = identity.secret_key_bech32();
-        let name = entry_name(entry);
+        let npub = identity.public_key_bech32();
 
         let mut child = Command::new("keepassxc-cli")
-            .args(["add", "-q", "-p", &expanded, name])
+            .args(["add", "--non-interactive", "-p", &expanded, entry])
             .stdin(Stdio::piped())
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit())
@@ -248,27 +247,22 @@ impl IdentityManager {
 
         if let Some(mut stdin) = child.stdin.take() {
             use std::io::Write;
-            writeln!(stdin, "{}\n{}\n{}", db_password, nsec, nsec)?;
+            writeln!(stdin, "{}\n{}", nsec, npub)?;
         }
 
         let status = child.wait()?;
         if !status.success() {
-            return Err("keepassxc-cli add failed: check master password".into());
+            return Err("keepassxc-cli add failed".into());
         }
 
         Ok(())
     }
 }
 
-fn entry_name(entry: &str) -> &str {
-    entry.rsplit('/').next().unwrap_or(entry)
-}
-
 fn get_nsec_keepassxc(db_path: &str, entry: &str) -> Result<String, Box<dyn std::error::Error>> {
     let expanded = shellexpand::tilde(db_path).to_string();
-    let name = entry_name(entry);
     let out = Command::new("keepassxc-cli")
-        .args(["show", "-q", "-s", "-a", "Password", &expanded, name])
+        .args(["show", "--quiet", "-s", "-a", "Password", &expanded, entry])
         .stdin(Stdio::inherit())
         .stdout(Stdio::piped())
         .stderr(Stdio::inherit())
@@ -454,17 +448,13 @@ mod tests {
         assert!(!identity.public_key_bech32().is_empty());
     }
 
-    use serial_test::serial;
-
     #[test]
-    #[serial]
     fn test_key_source_from_env_default() {
         std::env::remove_var("RR_KEYSTORE");
         assert_eq!(KeySource::from_env(), KeySource::File);
     }
 
     #[test]
-    #[serial]
     fn test_key_source_from_env_file() {
         std::env::set_var("RR_KEYSTORE", "file");
         assert_eq!(KeySource::from_env(), KeySource::File);
@@ -472,7 +462,6 @@ mod tests {
     }
 
     #[test]
-    #[serial]
     fn test_key_source_from_env_keepassxc() {
         std::env::set_var("RR_KEYSTORE", "keepassxc://~/vault.kdbx/Nostr/Identity");
         assert_eq!(
@@ -486,7 +475,6 @@ mod tests {
     }
 
     #[test]
-    #[serial]
     fn test_key_source_from_env_invalid_fallsback() {
         std::env::set_var("RR_KEYSTORE", "garbage");
         assert_eq!(KeySource::from_env(), KeySource::File);
