@@ -90,6 +90,15 @@ async fn cmd_init() {
     }
 
     println!("Stockée dans: {:?}", data_dir().join("keys.json"));
+
+    let keystore = std::env::var("RR_KEYSTORE").unwrap_or_default();
+    if keystore.is_empty() || keystore == "file" {
+        println!();
+        println!("⚠️  Clé stockée en clair sur le disque.");
+        println!("⚠️  Pour plus de sécurité, installe KeePassXC et utilise :");
+        println!("💡  rr init --kdbx ~/vault.kdbx");
+        println!("💡  https://keepassxc.org");
+    }
 }
 
 async fn cmd_identity() {
