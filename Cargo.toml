@@ -17,3 +17,7 @@ serde_json = "1"
 tokio = { version = "1", features = ["full"] }
 proptest = "1"
 bip39 = { version = "2", features = ["rand"] }
+keepass = "0.12"
+rpassword = "7"
+shellexpand = "3"
+toml = "0.8"
