@@ -86,7 +86,13 @@ async fn create_clients(relay: &str, users: usize, pre_connect: bool) -> Vec<Cli
     clients
 }
 
-async fn run_phase(clients: &[Client], msgs: usize, interval: Duration, parallelism: usize, state: &Arc<SharedState>) {
+async fn run_phase(
+    clients: &[Client],
+    msgs: usize,
+    interval: Duration,
+    parallelism: usize,
+    state: &Arc<SharedState>,
+) {
     let n = clients.len();
     if n == 0 {
         return;
