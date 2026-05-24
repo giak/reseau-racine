@@ -13,7 +13,7 @@ struct Args {
     users: usize,
     #[arg(long, default_value_t = 10)]
     messages: usize,
-    #[arg(long, default_value_t = 100)]
+    #[arg(long = "interval", default_value_t = 100)]
     interval_ms: u64,
     #[arg(long, default_value = "true")]
     pre_connect: bool,
@@ -66,7 +66,7 @@ async fn main() {
     run_stress(args).await;
 }
 
-async fn run_stress(args: Args) {
+async fn run_stress(_args: Args) {
     let _state = Arc::new(SharedState {
         success_count: AtomicU64::new(0),
         fail_count: AtomicU64::new(0),
