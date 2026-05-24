@@ -81,7 +81,7 @@ jobs:
           key: bench-crypto-${{ github.sha }}
           restore-keys: bench-crypto-
       - name: Run benchmarks
-        run: cargo bench --bench crypto -- --quick 2>&1 | tee bench-output.txt
+        run: cargo bench --bench crypto 2>&1 | tee bench-output.txt
       - name: Check for regression
         run: |
           if grep -q "Performance has regressed" bench-output.txt; then

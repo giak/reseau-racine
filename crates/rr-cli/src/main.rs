@@ -114,16 +114,7 @@ async fn cmd_bench(crypto_only: bool, transport_only: bool, relay: &str) {
     if run_crypto {
         println!("→ Running crypto benchmarks...");
         let status = std::process::Command::new("cargo")
-            .args([
-                "bench",
-                "--bench",
-                "crypto",
-                "--",
-                "--output-format",
-                "bencher",
-            ])
-            .stdout(std::process::Stdio::piped())
-            .stderr(std::process::Stdio::inherit())
+            .args(["bench", "--bench", "crypto"])
             .status();
 
         match status {
@@ -145,17 +136,8 @@ async fn cmd_bench(crypto_only: bool, transport_only: bool, relay: &str) {
 
         println!("→ Running transport benchmarks...");
         let status = std::process::Command::new("cargo")
-            .args([
-                "bench",
-                "--bench",
-                "transport",
-                "--",
-                "--output-format",
-                "bencher",
-            ])
+            .args(["bench", "--bench", "transport"])
             .env("RR_RELAY", relay)
-            .stdout(std::process::Stdio::piped())
-            .stderr(std::process::Stdio::inherit())
             .status();
 
         match status {
