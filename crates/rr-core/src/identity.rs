@@ -28,7 +28,10 @@ impl KeySource {
                     let entry = rest[idx + 6..].to_string();
                     KeySource::KeePassXc { db_path, entry }
                 } else {
-                    KeySource::KeePassXc { db_path: rest.to_string(), entry: String::new() }
+                    KeySource::KeePassXc {
+                        db_path: rest.to_string(),
+                        entry: String::new(),
+                    }
                 }
             }
             Ok(val) if val.starts_with("keepass-rs://") => {
@@ -38,7 +41,10 @@ impl KeySource {
                     let entry = rest[idx + 6..].to_string();
                     KeySource::KeePassRs { db_path, entry }
                 } else {
-                    KeySource::KeePassRs { db_path: rest.to_string(), entry: String::new() }
+                    KeySource::KeePassRs {
+                        db_path: rest.to_string(),
+                        entry: String::new(),
+                    }
                 }
             }
             _ => KeySource::File,
@@ -48,10 +54,14 @@ impl KeySource {
     pub fn from_config(config: &Config) -> Self {
         match &config.keystore {
             KeystoreConfig::File => Self::File,
-            KeystoreConfig::KeePassXc { db_path, entry } =>
-                Self::KeePassXc { db_path: db_path.clone(), entry: entry.clone() },
-            KeystoreConfig::KeePassRs { db_path, entry } =>
-                Self::KeePassRs { db_path: db_path.clone(), entry: entry.clone() },
+            KeystoreConfig::KeePassXc { db_path, entry } => Self::KeePassXc {
+                db_path: db_path.clone(),
+                entry: entry.clone(),
+            },
+            KeystoreConfig::KeePassRs { db_path, entry } => Self::KeePassRs {
+                db_path: db_path.clone(),
+                entry: entry.clone(),
+            },
         }
     }
 
@@ -150,7 +160,10 @@ pub struct IdentityManager {
 
 impl IdentityManager {
     pub fn new(data_dir: impl Into<PathBuf>) -> Self {
-        Self { data_dir: data_dir.into(), key_source: KeySource::File }
+        Self {
+            data_dir: data_dir.into(),
+            key_source: KeySource::File,
+        }
     }
 
     pub fn default_data_dir() -> PathBuf {
@@ -215,7 +228,12 @@ impl IdentityManager {
         Ok(())
     }
 
-    pub fn save_to_keepassxc(&self, identity: &Identity, db_path: &str, entry: &str) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn save_to_keepassxc(
+        &self,
+        identity: &Identity,
+        db_path: &str,
+        entry: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let expanded = shellexpand::tilde(db_path).to_string();
         let nsec = identity.secret_key_bech32();
         let npub = identity.public_key_bech32();
@@ -253,7 +271,9 @@ fn get_nsec_keepassxc(db_path: &str, entry: &str) -> Result<String, Box<dyn std:
         return Err("keepassxc-cli failed: check master password and entry path".into());
     }
     let nsec = String::from_utf8(out.stdout)?.trim().to_string();
-    if nsec.is_empty() { return Err("keepassxc-cli returned empty password".into()); }
+    if nsec.is_empty() {
+        return Err("keepassxc-cli returned empty password".into());
+    }
     Ok(nsec)
 }
 
@@ -446,7 +466,10 @@ mod tests {
         std::env::set_var("RR_KEYSTORE", "keepassxc://~/vault.kdbx/Nostr/Identity");
         assert_eq!(
             KeySource::from_env(),
-            KeySource::KeePassXc { db_path: "~/vault.kdbx".into(), entry: "Nostr/Identity".into() }
+            KeySource::KeePassXc {
+                db_path: "~/vault.kdbx".into(),
+                entry: "Nostr/Identity".into()
+            }
         );
         std::env::remove_var("RR_KEYSTORE");
     }

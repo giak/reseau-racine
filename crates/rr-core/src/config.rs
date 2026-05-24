@@ -15,20 +15,16 @@ pub enum KeystoreConfig {
     #[serde(rename = "file")]
     File,
     #[serde(rename = "keepassxc")]
-    KeePassXc {
-        db_path: String,
-        entry: String,
-    },
+    KeePassXc { db_path: String, entry: String },
     #[serde(rename = "keepass-rs")]
-    KeePassRs {
-        db_path: String,
-        entry: String,
-    },
+    KeePassRs { db_path: String, entry: String },
 }
 
 impl Default for Config {
     fn default() -> Self {
-        Self { keystore: KeystoreConfig::File }
+        Self {
+            keystore: KeystoreConfig::File,
+        }
     }
 }
 

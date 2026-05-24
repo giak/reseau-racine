@@ -131,7 +131,10 @@ async fn cmd_init(kdbx: &Option<String>, entry: &str) {
     io::stdout().flush().ok();
     let mut input = String::new();
     if io::stdin().read_line(&mut input).is_ok()
-        && matches!(input.trim().to_lowercase().as_str(), "oui" | "o" | "y" | "yes")
+        && matches!(
+            input.trim().to_lowercase().as_str(),
+            "oui" | "o" | "y" | "yes"
+        )
     {
         println!();
         println!("SEED PHRASE (notez ces 12 mots sur papier, pas de fichier numérique) :");
@@ -152,7 +155,10 @@ async fn cmd_init_kdbx(identity: Identity, manager: IdentityManager, db_path: &s
         eprintln!("Erreur sauvegarde KeePassXC: {}", e);
         return;
     }
-    println!("✅ Identité créée et stockée dans KeePassXC ({}/{})", db_path, entry);
+    println!(
+        "✅ Identité créée et stockée dans KeePassXC ({}/{})",
+        db_path, entry
+    );
     println!("🔑 Pubkey: {}", identity.public_key_bech32());
     let config = Config {
         keystore: rr_core::config::KeystoreConfig::KeePassXc {
@@ -455,5 +461,8 @@ async fn cmd_export(kdbx: &str, entry: &str) {
     println!("✅ Identité exportée vers KeePassXC ({})", kdbx);
     println!("🔑 Entrée: {}", entry);
     println!("🔑 Pubkey: {}", identity.public_key_bech32());
-    println!("💡 Utilisez: RR_KEYSTORE=keepassxc://{}/{} pour activer", kdbx, entry);
+    println!(
+        "💡 Utilisez: RR_KEYSTORE=keepassxc://{}/{} pour activer",
+        kdbx, entry
+    );
 }
