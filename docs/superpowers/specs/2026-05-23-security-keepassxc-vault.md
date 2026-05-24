@@ -242,6 +242,8 @@ flowchart TD
 
 ## RR_KEYSTORE format
 
+Séparation `<db_path>/<entry>` via `.kdbx/` (la db_path doit finir par `.kdbx`).
+
 | Valeur | Backend | Exemple |
 |--------|---------|---------|
 | absent ou `file` | JSON clair | — |

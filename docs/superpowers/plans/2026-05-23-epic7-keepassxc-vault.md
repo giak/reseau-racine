@@ -321,18 +321,31 @@ pub enum KeySource {
 }
 
 impl KeySource {
+    /// Parse RR_KEYSTORE env var.
+    /// Format: keepassxc://<db_path>/<entry> or keepass-rs://<db_path>/<entry>
+    /// db_path is split at `.kdbx/` to distinguish path from entry (both can contain /).
     pub fn from_env() -> Self {
         match std::env::var("RR_KEYSTORE") {
             Ok(val) if val == "file" || val.is_empty() => KeySource::File,
             Ok(val) if val.starts_with("keepassxc://") => {
                 let rest = val.trim_start_matches("keepassxc://");
-                let (db_path, entry) = rest.split_once('/').unwrap_or((rest, ""));
-                KeySource::KeePassXc { db_path: db_path.to_string(), entry: entry.to_string() }
+                if let Some(idx) = rest.find(".kdbx/") {
+                    let db_path = rest[..idx + 5].to_string();
+                    let entry = rest[idx + 6..].to_string();
+                    KeySource::KeePassXc { db_path, entry }
+                } else {
+                    KeySource::KeePassXc { db_path: rest.to_string(), entry: String::new() }
+                }
             }
             Ok(val) if val.starts_with("keepass-rs://") => {
                 let rest = val.trim_start_matches("keepass-rs://");
-                let (db_path, entry) = rest.split_once('/').unwrap_or((rest, ""));
-                KeySource::KeePassRs { db_path: db_path.to_string(), entry: entry.to_string() }
+                if let Some(idx) = rest.find(".kdbx/") {
+                    let db_path = rest[..idx + 5].to_string();
+                    let entry = rest[idx + 6..].to_string();
+                    KeySource::KeePassRs { db_path, entry }
+                } else {
+                    KeySource::KeePassRs { db_path: rest.to_string(), entry: String::new() }
+                }
             }
             _ => KeySource::File,
         }
