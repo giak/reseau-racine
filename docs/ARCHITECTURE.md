@@ -11,7 +11,7 @@
 | 4 | 🔴 | Client Tauri (bloqué GTK) |
 | 5 | ⬜ | Forward Secrecy |
 | 6 | ⬜ | Nœud relais |
-| 7 | ⬜ | Sécurité CLI : vault KeePassXC |
+| 7 | ✅ | Sécurité CLI : vault KeePassXC |
 | 8 | ⬜ | Performance : benchmarks |
 | 9 | ⬜ | Simulation charge : rr-stress |
 
@@ -34,7 +34,7 @@ graph TB
         ID["IdentityManager<br/>secp256k1 + BIP-39"]
         MSG["MessageService<br/>send / receive"]
         TRANS["NostrTransport<br/>connect / wait_for_connection"]
-        KEYSTORE["KeySource ⬜<br/>file / keepassxc / keepass-rs"]
+        KEYSTORE["KeySource ✅<br/>file / keepassxc / keepass-rs"]
     end
 
     subgraph STRESS["rr-stress (binary) ⬜"]
@@ -215,7 +215,7 @@ flowchart LR
     LOAD --> SIGN
 ```
 
-## 7. Vault KeePassXC ⬜ (EPIC 7)
+## 7. Vault KeePassXC ✅ (EPIC 7)
 
 ```mermaid
 flowchart TD
@@ -425,7 +425,7 @@ graph RL
         NS["nostr-sdk 0.44"]
         N44["nostr::nips::nip44"]
         N59["nostr::nips::nip59"]
-        KP["keepass-rs ⬜<br/>lecture KDBX"]
+        KP["keepass-rs ✅<br/>lecture KDBX"]
     end
 
     subgraph KEYCHAIN["KeePassXC"]
