@@ -31,7 +31,7 @@ fn setup_pair(rt: &Runtime) -> (Arc<Client>, Arc<Client>, PublicKey) {
 fn bench_publish_single(c: &mut Criterion) {
     let rt = Runtime::new().unwrap();
     let (client, _receiver, _receiver_pk) = setup_pair(&rt);
-    let sender_pk = PublicKey::from(Keys::generate().public_key());
+    let sender_pk = Keys::generate().public_key();
 
     c.bench_function("publish_single", |b| {
         b.iter(|| {
@@ -48,7 +48,7 @@ fn bench_publish_single(c: &mut Criterion) {
 fn bench_publish_batch(c: &mut Criterion) {
     let rt = Runtime::new().unwrap();
     let (client, _receiver, _receiver_pk) = setup_pair(&rt);
-    let sender_pk = PublicKey::from(Keys::generate().public_key());
+    let sender_pk = Keys::generate().public_key();
     let mut group = c.benchmark_group("publish_batch");
     group.sampling_mode(SamplingMode::Auto);
 
@@ -58,11 +58,7 @@ fn bench_publish_batch(c: &mut Criterion) {
                 rt.block_on(async {
                     for _ in 0..n {
                         client
-                            .send_private_msg(
-                                black_box(sender_pk),
-                                "benchmark payload",
-                                vec![],
-                            )
+                            .send_private_msg(black_box(sender_pk), "benchmark payload", vec![])
                             .await
                             .unwrap();
                     }
