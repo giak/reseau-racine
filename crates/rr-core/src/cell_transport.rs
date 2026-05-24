@@ -95,10 +95,10 @@ impl CellTransport {
     async fn send_cell_key(
         &self,
         receiver_pk: &PublicKey,
-        cell_key_hex: &str,
+        payload: &str,
         cell_id_hex: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let rumor = EventBuilder::new(Kind::TextNote, cell_key_hex.to_string())
+        let rumor = EventBuilder::new(Kind::TextNote, payload.to_string())
             .tag(Tag::custom(
                 TagKind::Custom("h".to_string().into()),
                 vec![cell_id_hex.to_string()],
