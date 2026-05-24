@@ -64,6 +64,15 @@ enum Commands {
     },
     /// Restaurer une identité depuis une seed phrase
     Restore { phrase: String },
+    /// Exécuter les benchmarks de performance
+    Bench {
+        #[arg(long)]
+        crypto_only: bool,
+        #[arg(long)]
+        transport_only: bool,
+        #[arg(long, default_value = "ws://172.20.0.2:8080")]
+        relay: String,
+    },
 }
 
 #[tokio::main]
@@ -79,6 +88,64 @@ async fn main() {
         Commands::Sync => cmd_sync().await,
         Commands::Export { kdbx, entry } => cmd_export(kdbx, entry).await,
         Commands::Restore { phrase } => cmd_restore(phrase).await,
+        Commands::Bench { crypto_only, transport_only, relay } => {
+            cmd_bench(*crypto_only, *transport_only, relay).await
+        }
+    }
+}
+
+fn check_relay(url: &str) -> bool {
+    let host = url
+        .trim_start_matches("ws://")
+        .trim_start_matches("wss://");
+    let addr = host.parse::<std::net::SocketAddr>().unwrap_or(
+        std::net::SocketAddr::new(
+            std::net::IpAddr::V4(std::net::Ipv4Addr::new(172, 20, 0, 2)),
+            8080,
+        ),
+    );
+    std::net::TcpStream::connect_timeout(&addr, std::time::Duration::from_secs(2)).is_ok()
+}
+
+async fn cmd_bench(crypto_only: bool, transport_only: bool, relay: &str) {
+    let run_crypto = !transport_only;
+    let run_transport = !crypto_only;
+
+    if run_crypto {
+        println!("→ Running crypto benchmarks...");
+        let status = std::process::Command::new("cargo")
+            .args(["bench", "--bench", "crypto", "--", "--output-format", "bencher"])
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::inherit())
+            .status();
+
+        match status {
+            Ok(s) if s.success() => println!("  ✅ Crypto benchmarks done"),
+            Ok(s) => eprintln!("  ⚠️  Crypto benchmarks exited with code: {}", s),
+            Err(e) => eprintln!("  ❌ Failed to run cargo bench: {}", e),
+        }
+    }
+
+    if run_transport {
+        println!("→ Checking relay at {}...", relay);
+        if !check_relay(relay) {
+            println!("  ⚠️  Relay {} unreachable, skipping transport benchmarks", relay);
+            return;
+        }
+
+        println!("→ Running transport benchmarks...");
+        let status = std::process::Command::new("cargo")
+            .args(["bench", "--bench", "transport", "--", "--output-format", "bencher"])
+            .env("RR_RELAY", relay)
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::inherit())
+            .status();
+
+        match status {
+            Ok(s) if s.success() => println!("  ✅ Transport benchmarks done"),
+            Ok(s) => eprintln!("  ⚠️  Transport benchmarks exited with code: {}", s),
+            Err(e) => eprintln!("  ❌ Failed to run cargo bench: {}", e),
+        }
     }
 }
 
