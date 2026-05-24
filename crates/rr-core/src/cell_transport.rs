@@ -5,6 +5,7 @@ use tokio::sync::Mutex;
 use uuid::Uuid;
 
 use crate::cell::{Cell, CellMember, CellStore};
+use crate::CryptoProvider;
 
 pub struct CellTransport {
     client: Client,
@@ -88,6 +89,181 @@ impl CellTransport {
         cell.members.push(CellMember::new(*new_member_pk, None));
         store.update_members(cell_id, cell.members.clone());
         store.save()?;
+
+        Ok(())
+    }
+
+    pub async fn send_message(
+        &self,
+        cell_id: &Uuid,
+        content: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let store = self.store.lock().await;
+        let cell = store
+            .find(cell_id)
+            .ok_or_else(|| format!("Cellule {} introuvable", cell_id))?;
+
+        let cell_sk = SecretKey::from_hex(&cell.cell_key_hex)?;
+        let cell_pk = Keys::new(cell_sk.clone()).public_key();
+        let cell_id_hex = cell.id.to_string();
+        let members: Vec<PublicKey> = cell.members.iter().map(|m| m.pubkey).collect();
+        drop(store);
+
+        let encrypted = CryptoProvider::encrypt(&cell_sk, &cell_pk, content)?;
+
+        let rumor = EventBuilder::new(Kind::TextNote, encrypted)
+            .tag(Tag::custom(
+                TagKind::Custom("h".to_string().into()),
+                vec![cell_id_hex],
+            ))
+            .build(self.keys.public_key());
+
+        for member_pk in &members {
+            let wrap = EventBuilder::gift_wrap(&self.keys, member_pk, rumor.clone(), []).await?;
+            self.client.send_event(&wrap).await?;
+        }
+
+        Ok(())
+    }
+
+    pub async fn listen(&self, cell_id: Option<&Uuid>) -> Result<(), Box<dyn std::error::Error>> {
+        let my_pk = self.keys.public_key();
+        let client = self.client.clone();
+
+        let (target_cell_id, cell_sk, cell_pk) = if let Some(cid) = cell_id {
+            let store = self.store.lock().await;
+            let cell = store
+                .find(cid)
+                .ok_or_else(|| format!("Cellule {} introuvable", cid))?;
+            let sk = SecretKey::from_hex(&cell.cell_key_hex)?;
+            let pk = Keys::new(sk.clone()).public_key();
+            (Some(cell.id.to_string()), Some(sk), Some(pk))
+        } else {
+            (None, None, None)
+        };
+
+        let filter = Filter::new().kind(Kind::GiftWrap).pubkey(my_pk);
+
+        client.subscribe(filter, None).await?;
+
+        if let Some(cid) = &target_cell_id {
+            println!("En écoute sur la cellule {} — Ctrl+C pour arrêter", cid);
+        } else {
+            println!("En écoute (mode découverte) — Ctrl+C pour arrêter");
+        }
+
+        client
+            .handle_notifications(|notification| {
+                let cell_sk = cell_sk.clone();
+                let target_cell_id = target_cell_id.clone();
+                let client = client.clone();
+                let keys = self.keys.clone();
+                let store_arc = self.store.clone();
+
+                async move {
+                    if let RelayPoolNotification::Event { event, .. } = notification {
+                        if event.kind != Kind::GiftWrap {
+                            return Ok(false);
+                        }
+                        let unwrapped = match client.unwrap_gift_wrap(&event).await {
+                            Ok(u) => u,
+                            Err(_) => return Ok(false),
+                        };
+                        let rumor = unwrapped.rumor;
+                        let sender_pk = unwrapped.sender;
+
+                        let h_tag_val: Option<String> = rumor
+                            .tags
+                            .iter()
+                            .find(|t| t.kind() == TagKind::Custom("h".to_string().into()))
+                            .and_then(|t| t.content())
+                            .map(|s| s.to_string());
+
+                        let h_tag = match &h_tag_val {
+                            Some(v) => v.clone(),
+                            None => return Ok(false),
+                        };
+
+                        // Mode 1: listening to a specific cell
+                        if let Some(tid) = &target_cell_id {
+                            if &h_tag != tid {
+                                return Ok(false);
+                            }
+                            if let (Some(ref sk), Some(ref pk)) = (&cell_sk, &cell_pk) {
+                                if let Ok(plaintext) =
+                                    CryptoProvider::decrypt(sk, pk, &rumor.content)
+                                {
+                                    if sender_pk != keys.public_key() {
+                                        let snpub = sender_pk
+                                            .to_bech32()
+                                            .unwrap_or_else(|_| sender_pk.to_string());
+                                        println!("[{}] {}: {}", tid, snpub, plaintext);
+                                    }
+                                }
+                            }
+                            return Ok(false);
+                        }
+
+                        // Mode 2: discovery — try key distribution first
+                        let cell_id_parsed = uuid::Uuid::parse_str(&h_tag);
+                        let mut store = store_arc.lock().await;
+
+                        if let Ok(cid) = cell_id_parsed {
+                            if store.find(&cid).is_none() {
+                                // Unknown cell — check if this is a key distribution
+                                if let Ok(payload) =
+                                    serde_json::from_str::<serde_json::Value>(&rumor.content)
+                                {
+                                    if let (Some(key), Some(label)) = (
+                                        payload.get("key").and_then(|v| v.as_str()),
+                                        payload.get("label").and_then(|v| v.as_str()),
+                                    ) {
+                                        let new_cell = Cell::new(
+                                            label,
+                                            key.to_string(),
+                                            vec![
+                                                CellMember::new(sender_pk, None),
+                                                CellMember::new(
+                                                    keys.public_key(),
+                                                    Some("me".to_string()),
+                                                ),
+                                            ],
+                                        );
+                                        store.add(new_cell.clone());
+                                        if let Err(e) = store.save() {
+                                            eprintln!("Erreur sauvegarde cellule: {}", e);
+                                        }
+                                        println!("Nouvelle cellule: {} ({})", label, new_cell.id);
+                                    }
+                                }
+                            } else {
+                                // Known cell — decrypt and display
+                                if let Some(cell) = store.find(&cid).cloned() {
+                                    drop(store);
+                                    if let Ok(sk) = SecretKey::from_hex(&cell.cell_key_hex) {
+                                        let pk = Keys::new(sk.clone()).public_key();
+                                        if let Ok(plaintext) =
+                                            CryptoProvider::decrypt(&sk, &pk, &rumor.content)
+                                        {
+                                            if sender_pk != keys.public_key() {
+                                                let snpub = sender_pk
+                                                    .to_bech32()
+                                                    .unwrap_or_else(|_| sender_pk.to_string());
+                                                println!(
+                                                    "[{}] {}: {}",
+                                                    cell.label, snpub, plaintext
+                                                );
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Ok(false)
+                }
+            })
+            .await?;
 
         Ok(())
     }
