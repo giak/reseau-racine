@@ -175,7 +175,7 @@ impl CellTransport {
             .sender_keys
             .iter()
             .find(|sk| sk.member_pubkey == my_pk)
-            .ok_or_else(|| "Aucune clé d'envoi")?;
+            .ok_or("Aucune clé d'envoi")?;
         let mut chain = [0u8; 32];
         hex::decode_to_slice(&sk.chain_key_hex, &mut chain)?;
         let (msg_key, next_chain) = sender_key::ratchet_forward(&chain, sk.msg_count);
