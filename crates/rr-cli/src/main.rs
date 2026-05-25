@@ -117,9 +117,7 @@ enum GroupCommands {
         member: String,
     },
     /// Régénérer les clés d'une cellule sans retirer de membre
-    RotateKey {
-        cell_id: String,
-    },
+    RotateKey { cell_id: String },
     /// Écouter les messages d'une cellule (ou mode découverte sans argument)
     Listen { cell_id: Option<String> },
 }
