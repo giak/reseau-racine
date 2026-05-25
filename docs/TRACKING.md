@@ -1,16 +1,16 @@
 # Dashboard Réseau Racine
 
-> Mis à jour : 2026-05-24
+> Mis à jour : 2026-05-25
 
 ## Status global
 
 ```
 ██████████  EPIC 0  — Fondations              ✅  35/35  (100%)
 ████████░░  EPIC 1  — Message chiffré NIP-17  ✅   5/5   (100%)
-░░░░░░░░░░  EPIC 2  — Groupes & cellules      ⬜  —
+██████████  EPIC 2  — Groupes & cellules      ✅   7/7   (100%)
 ░░░░░░░░░░  EPIC 3  — Reticulum WiFi          ⬜  —
 ░░░░░░░░░░  EPIC 4  — Client Tauri            ⬜  —
-░░░░░░░░░░  EPIC 5  — Forward Secrecy         ⬜  —
+██████████  EPIC 5  — Forward Secrecy         ✅   4/4   Sender Keys
 ░░░░░░░░░░  EPIC 6  — Nœud relais             ⬜  —
 ████████░░  EPIC 7  — Sécurité CLI            ✅  4/4   KeePassXC vault
 ██████████  EPIC 8  — Performance             ✅  4/4   Benchmarks système
@@ -141,13 +141,43 @@ RUST_LOG=debug ./scripts/dev.sh env RR_DATA_DIR=/tmp/rr-bob cargo run --package 
 
 ---
 
-## EPIC 2 — Groupes & Cellules
+## EPIC 2 — Groupes & Cellules ✅ (7/7)
 
-| Story | Status |
-|-------|--------|
-| NIP-44 + clé de groupe X25519 | ⬜ |
-| Cellules de 3 (gift-wrap broadcast) | ⬜ |
-| Invitation / join | ⬜ |
+Communication chiffrée en petit groupe (3-5 membres) sur Nostr avec clé partagée X25519 + Sender Keys.
+
+| Story | Status | Détail |
+|-------|--------|--------|
+| Cell types + CellStore JSON | ✅ | `Cell`, `CellMember`, `SenderKey`, `CellStore` avec path isolé par `RR_DATA_DIR` |
+| Gift-wrap broadcast | ✅ | `CellTransport` — rumor kind 13 tag `h`=cell UUID, gift-wrap kind 1059 par destinataire |
+| Invitation / join | ✅ | `create_cell` génère clé X25519 + Sender Keys, `invite_member` distribue clés |
+| `send_message` / `listen` | ✅ | Sender Key ratchet (HKDF-SHA256 → ChaCha20-Poly1305) + legacy NIP-44 fallback |
+| CLI `group` subcommand (6 handlers) | ✅ | `create`, `list`, `info`, `invite`, `send`, `listen` |
+| E2E validation cross-identité | ✅ | identity A → B déchiffre messages chiffrés via relay local |
+| `remove_member` + `rotate_key` | ✅ | Régénère Sender Keys pour membres restants, distribue via gift-wrap |
+| CLI `group remove` + `group rotate-key` | ✅ | |
+
+### Architecture
+
+| Composant | Fichier | Rôle |
+|-----------|---------|------|
+| Types Cell | `crates/rr-core/src/cell.rs` | Cell, CellMember, SenderKey, CellStore |
+| Transport | `crates/rr-core/src/cell_transport.rs` | CellTransport — create, invite, send, listen, remove, rotate |
+| Sender Key crypto | `crates/rr-core/src/sender_key.rs` | HKDF ratchet, encrypt/decrypt ChaCha20-Poly1305 |
+| Legacy crypto | `crates/rr-core/src/crypto.rs` | NIP-44 self-DH (conservé pour backward compat) |
+| CLI | `crates/rr-cli/src/main.rs` | GroupCommands (8 sous-commandes) |
+
+### Qualité
+
+| Métrique | Status |
+|----------|--------|
+| Tests | ✅ 51/51 pass (31 unit + 20 integration) |
+| Clippy | ✅ 0 warnings |
+| Sender Key tests | ✅ Ratchet déterministe + unique, ChaCha20 roundtrip, wrong key reject |
+| Cell store tests | ✅ Roundtrip, find, add/remove, update members, SenderKey serialization |
+| Legacy backward compat | ✅ Cellules sans sender_keys continuent NIP-44 |
+
+**Specs :** `docs/superpowers/specs/2026-05-24-epic2-groupes-cellules.md`, `docs/superpowers/specs/2026-05-25-epic3-sender-keys-rotation.md`
+**Plans :** `docs/superpowers/plans/2026-05-24-epic2-groupes-cellules.md`, `docs/superpowers/plans/2026-05-25-epic3-sender-keys.md`
 
 ---
 
@@ -170,12 +200,28 @@ RUST_LOG=debug ./scripts/dev.sh env RR_DATA_DIR=/tmp/rr-bob cargo run --package 
 
 ---
 
-## EPIC 5 — Forward Secrecy
+## EPIC 5 — Forward Secrecy ✅ (4/4)
 
-| Story | Status |
-|-------|--------|
-| Double Ratchet | ⬜ |
-| Zeroize mémoire | ⬜ |
+Per-message forward secrecy via Sender Keys (Signal-style) pour les cellules de groupe.
+
+| Story | Status | Détail |
+|-------|--------|--------|
+| Sender Key type + HKDF ratchet | ✅ | HKDF-SHA256 — unique par message, 32B msg_key + 32B next_chain_key |
+| ChaCha20-Poly1305 encrypt/decrypt | ✅ | Zero nonce (clé unique par message), base64 ciphertext |
+| Sender Key distribution | ✅ | `create_cell` + `invite_member` génèrent et distribuent clés via gift-wrap |
+| Key rotation on member removal | ✅ | `remove_member` + `rotate_key` : regénère toutes les Sender Keys, distribue aux membres restants |
+| `key_rotation` event handling | ✅ | Discovery mode détecte `action: "key_rotation"` et met à jour le store local |
+
+### Décisions architecturales
+
+| Décision | Justification |
+|----------|---------------|
+| Sender Keys (Signal-style) vs MLS | MLS = over-engineering pour 3-5 membres. Sender Keys = O(N) distribution sur remove, per-message FS via HKDF ratchet, rotation PCS on-demand |
+| ChaCha20-Poly1305 pur vs NIP-44 | NIP-44 attend ECDH X25519. Clé symétrique 32B n'est pas une X25519 valide. `chacha20poly1305` déjà transitif dans `nostr-rs` |
+| Legacy backward compat | Cellules EPIC 2 sans sender_keys continuent NIP-44 self-DH. Detection au runtime : SK first, fallback NIP-44 |
+
+**Spec :** `docs/superpowers/specs/2026-05-25-epic3-sender-keys-rotation.md`
+**Plan :** `docs/superpowers/plans/2026-05-25-epic3-sender-keys.md`
 
 ---
 
