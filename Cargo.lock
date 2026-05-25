@@ -1809,6 +1809,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e712f64ec3850b98572bffac52e2c6f282b29fe6c5fa6d42334b30be438d95c1"
 
 [[package]]
+name = "hkdf"
+version = "0.12.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7b5f8eb2ad728638ea2c7d47a21db23b7b58a72ed6a38256b8a1849f15fbbdf7"
+dependencies = [
+ "hmac 0.12.1",
+]
+
+[[package]]
 name = "hmac"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3533,6 +3542,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio",
+ "uuid",
 ]
 
 [[package]]
@@ -3540,19 +3550,25 @@ name = "rr-core"
 version = "0.1.0"
 dependencies = [
  "bip39",
+ "chacha20poly1305",
  "criterion",
  "dirs",
+ "hex",
+ "hkdf",
  "keepass",
  "nostr",
  "nostr-sdk",
  "proptest",
+ "rand 0.8.6",
  "rpassword",
  "serde",
  "serde_json",
  "serial_test",
+ "sha2 0.10.9",
  "shellexpand",
  "tokio",
  "toml 0.8.2",
+ "uuid",
 ]
 
 [[package]]

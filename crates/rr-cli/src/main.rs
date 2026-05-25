@@ -3,12 +3,15 @@ use nostr::nips::nip19::{FromBech32, ToBech32};
 use nostr::nips::nip59::UnwrappedGift;
 use nostr::{Kind, PublicKey};
 use nostr_sdk::{Filter, RelayPoolNotification};
+use rr_core::cell::CellStore;
 use rr_core::config::Config;
 use rr_core::identity::{Identity, IdentityManager, KeySource};
 use rr_core::message::MessageService;
 use rr_core::transport::nostr::NostrTransport;
+use rr_core::CellTransport;
 use std::io::{self, Write};
 use std::path::PathBuf;
+use uuid::Uuid;
 
 fn data_dir() -> PathBuf {
     std::env::var("RR_DATA_DIR")
@@ -64,6 +67,9 @@ enum Commands {
     },
     /// Restaurer une identité depuis une seed phrase
     Restore { phrase: String },
+    /// Commandes de groupe (cellules)
+    #[command(subcommand)]
+    Group(GroupCommands),
     /// Exécuter les benchmarks de performance
     Bench {
         #[arg(long)]
@@ -73,6 +79,49 @@ enum Commands {
         #[arg(long, default_value = "ws://172.20.0.2:8080")]
         relay: String,
     },
+}
+
+#[derive(Subcommand)]
+enum GroupCommands {
+    /// Créer une cellule
+    Create {
+        #[arg(long)]
+        label: String,
+        /// Liste de npubs séparés par des virgules
+        #[arg(long, value_delimiter = ',')]
+        members: Vec<String>,
+    },
+    /// Lister les cellules
+    List,
+    /// Détails d'une cellule
+    Info {
+        /// Cell ID (UUID)
+        cell_id: String,
+    },
+    /// Inviter un membre dans une cellule
+    Invite {
+        cell_id: String,
+        #[arg(long)]
+        member: String,
+    },
+    /// Envoyer un message dans une cellule
+    Send {
+        cell_id: String,
+        #[arg(long)]
+        message: String,
+    },
+    /// Retirer un membre d'une cellule (regénère les clés)
+    Remove {
+        cell_id: String,
+        #[arg(long)]
+        member: String,
+    },
+    /// Régénérer les clés d'une cellule sans retirer de membre
+    RotateKey {
+        cell_id: String,
+    },
+    /// Écouter les messages d'une cellule (ou mode découverte sans argument)
+    Listen { cell_id: Option<String> },
 }
 
 #[tokio::main]
@@ -88,6 +137,16 @@ async fn main() {
         Commands::Sync => cmd_sync().await,
         Commands::Export { kdbx, entry } => cmd_export(kdbx, entry).await,
         Commands::Restore { phrase } => cmd_restore(phrase).await,
+        Commands::Group(group_cmd) => match group_cmd {
+            GroupCommands::Create { label, members } => cmd_group_create(label, members).await,
+            GroupCommands::List => cmd_group_list().await,
+            GroupCommands::Info { cell_id } => cmd_group_info(cell_id).await,
+            GroupCommands::Invite { cell_id, member } => cmd_group_invite(cell_id, member).await,
+            GroupCommands::Send { cell_id, message } => cmd_group_send(cell_id, message).await,
+            GroupCommands::Remove { cell_id, member } => cmd_group_remove(cell_id, member).await,
+            GroupCommands::RotateKey { cell_id } => cmd_group_rotate_key(cell_id).await,
+            GroupCommands::Listen { cell_id } => cmd_group_listen(cell_id.as_deref()).await,
+        },
         Commands::Bench {
             crypto_only,
             transport_only,
@@ -531,4 +590,287 @@ async fn cmd_export(kdbx: &str, entry: &str) {
         "💡 Utilisez: RR_KEYSTORE=keepassxc://{}/{} pour activer",
         kdbx, entry
     );
+}
+
+async fn cmd_group_create(label: &str, members_npub: &[String]) {
+    let manager = IdentityManager::new(data_dir()).with_key_source(key_source());
+    let identity = match manager.load() {
+        Ok(id) => id,
+        Err(e) => {
+            eprintln!("Erreur: aucune identité trouvée (lancez `rr init`) : {}", e);
+            return;
+        }
+    };
+
+    let mut member_pubkeys = Vec::new();
+    for npub in members_npub {
+        match PublicKey::from_bech32(npub) {
+            Ok(pk) => member_pubkeys.push(pk),
+            Err(e) => {
+                eprintln!("Erreur: npub invalide '{}': {}", npub, e);
+                return;
+            }
+        }
+    }
+
+    if member_pubkeys.is_empty() {
+        eprintln!("Erreur: au moins un membre requis");
+        return;
+    }
+
+    let relay = std::env::var("RR_RELAY").unwrap_or_else(|_| "wss://relay.damus.io".to_string());
+    let transport = match NostrTransport::with_keys(&relay, identity.keys().clone()).await {
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("Erreur connexion relais: {}", e);
+            return;
+        }
+    };
+
+    let cell_transport = CellTransport::new(transport.client().clone(), identity.keys().clone());
+
+    match cell_transport.create_cell(label, &member_pubkeys).await {
+        Ok(cell) => {
+            println!("✅ Cellule créée : {}", cell.id);
+            println!("   Label: {}", cell.label);
+            println!("   Membres: {}", cell.members.len());
+        }
+        Err(e) => eprintln!("Erreur création cellule: {}", e),
+    }
+}
+
+async fn cmd_group_list() {
+    let store = CellStore::load();
+    let cells = store.all();
+    if cells.is_empty() {
+        println!("Aucune cellule. Créez-en une avec `rr group create`");
+        return;
+    }
+    for cell in cells {
+        println!(
+            "  {} — {} ({} membres)",
+            cell.id,
+            cell.label,
+            cell.members.len()
+        );
+    }
+}
+
+async fn cmd_group_info(cell_id_str: &str) {
+    let cell_id = match Uuid::parse_str(cell_id_str) {
+        Ok(id) => id,
+        Err(e) => {
+            eprintln!("Erreur: UUID invalide '{}': {}", cell_id_str, e);
+            return;
+        }
+    };
+    let store = CellStore::load();
+    match store.find(&cell_id) {
+        Some(cell) => {
+            println!("  ID: {}", cell.id);
+            println!("  Label: {}", cell.label);
+            println!("  Membres:");
+            for member in &cell.members {
+                let label = member.label.as_deref().unwrap_or("?");
+                let npub = member
+                    .pubkey
+                    .to_bech32()
+                    .unwrap_or_else(|_| member.pubkey.to_string());
+                println!("    * {} ({})", label, npub);
+            }
+            println!("  Créée le: {}", cell.created_at_secs);
+        }
+        None => eprintln!("Cellule '{}' introuvable", cell_id_str),
+    }
+}
+
+async fn cmd_group_invite(cell_id_str: &str, member_npub: &str) {
+    let cell_id = match Uuid::parse_str(cell_id_str) {
+        Ok(id) => id,
+        Err(e) => {
+            eprintln!("Erreur: UUID invalide '{}': {}", cell_id_str, e);
+            return;
+        }
+    };
+    let member_pk = match PublicKey::from_bech32(member_npub) {
+        Ok(pk) => pk,
+        Err(e) => {
+            eprintln!("Erreur: npub invalide '{}': {}", member_npub, e);
+            return;
+        }
+    };
+
+    let manager = IdentityManager::new(data_dir()).with_key_source(key_source());
+    let identity = match manager.load() {
+        Ok(id) => id,
+        Err(e) => {
+            eprintln!("Erreur: identité non trouvée: {}", e);
+            return;
+        }
+    };
+
+    let relay = std::env::var("RR_RELAY").unwrap_or_else(|_| "wss://relay.damus.io".to_string());
+    let transport = match NostrTransport::with_keys(&relay, identity.keys().clone()).await {
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("Erreur connexion relais: {}", e);
+            return;
+        }
+    };
+
+    let cell_transport = CellTransport::new(transport.client().clone(), identity.keys().clone());
+
+    match cell_transport.invite_member(&cell_id, &member_pk).await {
+        Ok(()) => println!("✅ Membre invité dans la cellule {}", cell_id),
+        Err(e) => eprintln!("Erreur invitation: {}", e),
+    }
+}
+
+async fn cmd_group_send(cell_id_str: &str, message: &str) {
+    let cell_id = match Uuid::parse_str(cell_id_str) {
+        Ok(id) => id,
+        Err(e) => {
+            eprintln!("Erreur: UUID invalide '{}': {}", cell_id_str, e);
+            return;
+        }
+    };
+
+    let manager = IdentityManager::new(data_dir()).with_key_source(key_source());
+    let identity = match manager.load() {
+        Ok(id) => id,
+        Err(e) => {
+            eprintln!("Erreur: identité non trouvée: {}", e);
+            return;
+        }
+    };
+
+    let relay = std::env::var("RR_RELAY").unwrap_or_else(|_| "wss://relay.damus.io".to_string());
+    let transport = match NostrTransport::with_keys(&relay, identity.keys().clone()).await {
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("Erreur connexion relais: {}", e);
+            return;
+        }
+    };
+
+    let cell_transport = CellTransport::new(transport.client().clone(), identity.keys().clone());
+
+    match cell_transport.send_message(&cell_id, message).await {
+        Ok(()) => println!("✅ Message envoyé dans la cellule {}", cell_id),
+        Err(e) => eprintln!("Erreur envoi: {}", e),
+    }
+}
+
+async fn cmd_group_listen(cell_id_str: Option<&str>) {
+    let cell_id = match cell_id_str {
+        Some(s) => match Uuid::parse_str(s) {
+            Ok(id) => Some(id),
+            Err(e) => {
+                eprintln!("Erreur: UUID invalide '{}': {}", s, e);
+                return;
+            }
+        },
+        None => None,
+    };
+
+    let manager = IdentityManager::new(data_dir()).with_key_source(key_source());
+    let identity = match manager.load() {
+        Ok(id) => id,
+        Err(e) => {
+            eprintln!("Erreur: identité non trouvée: {}", e);
+            return;
+        }
+    };
+
+    let relay = std::env::var("RR_RELAY").unwrap_or_else(|_| "wss://relay.damus.io".to_string());
+    let transport = match NostrTransport::with_keys(&relay, identity.keys().clone()).await {
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("Erreur connexion relais: {}", e);
+            return;
+        }
+    };
+
+    let cell_transport = CellTransport::new(transport.client().clone(), identity.keys().clone());
+
+    if let Err(e) = cell_transport.listen(cell_id.as_ref()).await {
+        eprintln!("Erreur écoute: {}", e);
+    }
+}
+
+async fn cmd_group_remove(cell_id_str: &str, member_npub: &str) {
+    let cell_id = match Uuid::parse_str(cell_id_str) {
+        Ok(id) => id,
+        Err(e) => {
+            eprintln!("Erreur: UUID invalide '{}': {}", cell_id_str, e);
+            return;
+        }
+    };
+    let member_pk = match PublicKey::from_bech32(member_npub) {
+        Ok(pk) => pk,
+        Err(e) => {
+            eprintln!("Erreur: npub invalide '{}': {}", member_npub, e);
+            return;
+        }
+    };
+
+    let manager = IdentityManager::new(data_dir()).with_key_source(key_source());
+    let identity = match manager.load() {
+        Ok(id) => id,
+        Err(e) => {
+            eprintln!("Erreur: identité non trouvée: {}", e);
+            return;
+        }
+    };
+
+    let relay = std::env::var("RR_RELAY").unwrap_or_else(|_| "wss://relay.damus.io".to_string());
+    let transport = match NostrTransport::with_keys(&relay, identity.keys().clone()).await {
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("Erreur connexion relais: {}", e);
+            return;
+        }
+    };
+
+    let cell_transport = CellTransport::new(transport.client().clone(), identity.keys().clone());
+
+    match cell_transport.remove_member(&cell_id, &member_pk).await {
+        Ok(()) => println!("✅ Membre retiré et clés régénérées"),
+        Err(e) => eprintln!("Erreur retrait membre: {}", e),
+    }
+}
+
+async fn cmd_group_rotate_key(cell_id_str: &str) {
+    let cell_id = match Uuid::parse_str(cell_id_str) {
+        Ok(id) => id,
+        Err(e) => {
+            eprintln!("Erreur: UUID invalide '{}': {}", cell_id_str, e);
+            return;
+        }
+    };
+
+    let manager = IdentityManager::new(data_dir()).with_key_source(key_source());
+    let identity = match manager.load() {
+        Ok(id) => id,
+        Err(e) => {
+            eprintln!("Erreur: identité non trouvée: {}", e);
+            return;
+        }
+    };
+
+    let relay = std::env::var("RR_RELAY").unwrap_or_else(|_| "wss://relay.damus.io".to_string());
+    let transport = match NostrTransport::with_keys(&relay, identity.keys().clone()).await {
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("Erreur connexion relais: {}", e);
+            return;
+        }
+    };
+
+    let cell_transport = CellTransport::new(transport.client().clone(), identity.keys().clone());
+
+    match cell_transport.rotate_key(&cell_id).await {
+        Ok(()) => println!("✅ Clés régénérées"),
+        Err(e) => eprintln!("Erreur rotation clés: {}", e),
+    }
 }
