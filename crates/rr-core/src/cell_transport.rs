@@ -168,16 +168,16 @@ impl CellTransport {
         let my_pk = self.keys.public_key();
         let client = self.client.clone();
 
-        let (target_cell_id, cell_sk, cell_pk) = if let Some(cid) = cell_id {
+        let (target_cell_id, cell_sk, cell_pk, cell_sender_keys) = if let Some(cid) = cell_id {
             let store = self.store.lock().await;
             let cell = store
                 .find(cid)
                 .ok_or_else(|| format!("Cellule {} introuvable", cid))?;
-            let sk = SecretKey::from_hex(&cell.cell_key_hex)?;
-            let pk = Keys::new(sk.clone()).public_key();
-            (Some(cell.id.to_string()), Some(sk), Some(pk))
+            let sk = SecretKey::from_hex(&cell.cell_key_hex).ok();
+            let pk = sk.as_ref().map(|s| Keys::new(s.clone()).public_key());
+            (Some(cell.id.to_string()), sk, pk, cell.sender_keys.clone())
         } else {
-            (None, None, None)
+            (None, None, None, vec![])
         };
 
         let filter = Filter::new().kind(Kind::GiftWrap).pubkey(my_pk);
@@ -193,6 +193,7 @@ impl CellTransport {
         client
             .handle_notifications(|notification| {
                 let cell_sk = cell_sk.clone();
+                let cell_sender_keys = cell_sender_keys.clone();
                 let target_cell_id = target_cell_id.clone();
                 let client = client.clone();
                 let keys = self.keys.clone();
@@ -227,6 +228,41 @@ impl CellTransport {
                             if &h_tag != tid {
                                 return Ok(false);
                             }
+
+                            // Try Sender Key decryption first
+                            if let Some(sk) = cell_sender_keys.iter().find(|sk| sk.member_pubkey == sender_pk) {
+                                let mut chain = [0u8; 32];
+                                if hex::decode_to_slice(&sk.chain_key_hex, &mut chain).is_ok() {
+                                    let (msg_key, next_chain) = sender_key::ratchet_forward(&chain);
+                                    if let Ok(cipher_bytes) = {
+                                        use base64::Engine as _;
+                                        let engine = base64::engine::general_purpose::STANDARD;
+                                        engine.decode(&rumor.content)
+                                    } {
+                                        if let Ok(plaintext) = sender_key::decrypt_with_message_key(&msg_key, &cipher_bytes) {
+                                            // Update chain in store
+                                            let mut store = store_arc.lock().await;
+                                            if let Some(cell) = store.cells.iter_mut().find(|c| c.id.to_string() == h_tag) {
+                                                if let Some(sk) = cell.sender_keys.iter_mut().find(|sk| sk.member_pubkey == sender_pk) {
+                                                    sk.chain_key_hex = hex::encode(next_chain);
+                                                    sk.msg_count += 1;
+                                                }
+                                            }
+                                            drop(store);
+
+                                            if sender_pk != keys.public_key() {
+                                                let snpub = sender_pk
+                                                    .to_bech32()
+                                                    .unwrap_or_else(|_| sender_pk.to_string());
+                                                println!("[{}] {}: {}", tid, snpub, plaintext);
+                                            }
+                                            return Ok(false);
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Legacy fallback: NIP-44
                             if let (Some(ref sk), Some(ref pk)) = (&cell_sk, &cell_pk) {
                                 if let Ok(plaintext) =
                                     CryptoProvider::decrypt(sk, pk, &rumor.content)
@@ -279,6 +315,45 @@ impl CellTransport {
                                 // Known cell — decrypt and display
                                 if let Some(cell) = store.find(&cid).cloned() {
                                     drop(store);
+
+                                    // Try Sender Key first
+                                    if let Some(sk) = cell.sender_keys.iter().find(|sk| sk.member_pubkey == sender_pk) {
+                                        let mut chain = [0u8; 32];
+                                        if hex::decode_to_slice(&sk.chain_key_hex, &mut chain).is_ok() {
+                                            let (msg_key, next_chain) = sender_key::ratchet_forward(&chain);
+                                            if let Ok(cipher_bytes) = {
+                                                use base64::Engine as _;
+                                                let engine = base64::engine::general_purpose::STANDARD;
+                                                engine.decode(&rumor.content)
+                                            } {
+                                                if let Ok(plaintext) = sender_key::decrypt_with_message_key(&msg_key, &cipher_bytes) {
+                                                    // Update chain in store
+                                                    let mut store = store_arc.lock().await;
+                                                    if let Some(c) = store.cells.iter_mut().find(|c| c.id == cid) {
+                                                        if let Some(sk) = c.sender_keys.iter_mut().find(|sk| sk.member_pubkey == sender_pk) {
+                                                            sk.chain_key_hex = hex::encode(next_chain);
+                                                            sk.msg_count += 1;
+                                                        }
+                                                    }
+                                                    store.save().ok();
+                                                    drop(store);
+
+                                                    if sender_pk != keys.public_key() {
+                                                        let snpub = sender_pk
+                                                            .to_bech32()
+                                                            .unwrap_or_else(|_| sender_pk.to_string());
+                                                        println!(
+                                                            "[{}] {}: {}",
+                                                            cell.label, snpub, plaintext
+                                                        );
+                                                    }
+                                                    return Ok(false);
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    // Legacy fallback
                                     if let Ok(sk) = SecretKey::from_hex(&cell.cell_key_hex) {
                                         let pk = Keys::new(sk.clone()).public_key();
                                         if let Ok(plaintext) =
