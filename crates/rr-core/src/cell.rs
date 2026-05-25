@@ -37,6 +37,7 @@ pub struct Cell {
     pub id: Uuid,
     pub label: String,
     /// Hex-encoded SecretKey (cell_key_hex -> SecretKey::from_hex)
+    #[serde(default)]
     pub cell_key_hex: String,
     pub sender_keys: Vec<SenderKey>,
     pub members: Vec<CellMember>,

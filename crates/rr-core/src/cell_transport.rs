@@ -7,7 +7,7 @@ use uuid::Uuid;
 
 use crate::cell::{Cell, CellMember, CellStore, SenderKey};
 use crate::sender_key;
-use crate::CryptoProvider;
+
 
 pub struct CellTransport {
     client: Client,
@@ -59,6 +59,7 @@ impl CellTransport {
             id: Uuid::new_v4(),
             label: label.to_string(),
             cell_key_hex: String::new(),
+
             sender_keys: vec![sender_key.clone()],
             members,
             created_at_secs: std::time::SystemTime::now()
@@ -414,16 +415,14 @@ impl CellTransport {
         let my_pk = self.keys.public_key();
         let client = self.client.clone();
 
-        let (target_cell_id, cell_sk, cell_pk) = if let Some(cid) = cell_id {
+        let target_cell_id = if let Some(cid) = cell_id {
             let store = self.store.lock().await;
             let cell = store
                 .find(cid)
                 .ok_or_else(|| format!("Cellule {} introuvable", cid))?;
-            let sk = SecretKey::from_hex(&cell.cell_key_hex).ok();
-            let pk = sk.as_ref().map(|s| Keys::new(s.clone()).public_key());
-            (Some(cell.id.to_string()), sk, pk)
+            Some(cell.id.to_string())
         } else {
-            (None, None, None)
+            None
         };
 
         let filter = Filter::new().kind(Kind::GiftWrap).pubkey(my_pk);
@@ -438,7 +437,7 @@ impl CellTransport {
 
         client
             .handle_notifications(|notification| {
-                let cell_sk = cell_sk.clone();
+
                 let target_cell_id = target_cell_id.clone();
                 let client = client.clone();
                 let keys = self.keys.clone();
@@ -520,19 +519,6 @@ impl CellTransport {
                             }
                             drop(store);
 
-                            // Legacy fallback: NIP-44
-                            if let (Some(ref sk), Some(ref pk)) = (&cell_sk, &cell_pk) {
-                                if let Ok(plaintext) =
-                                    CryptoProvider::decrypt(sk, pk, &rumor.content)
-                                {
-                                    if sender_pk != keys.public_key() {
-                                        let snpub = sender_pk
-                                            .to_bech32()
-                                            .unwrap_or_else(|_| sender_pk.to_string());
-                                        println!("[{}] {}: {}", tid, snpub, plaintext);
-                                    }
-                                }
-                            }
                             return Ok(false);
                         }
 
@@ -587,10 +573,9 @@ impl CellTransport {
                                 }
                             } else {
                                 // Known cell — decrypt and display
-                                // Clone cell info for legacy fallback before dropping store
-                                let cell_info = store
+                                let cell_label = store
                                     .find(&cid)
-                                    .map(|c| (c.cell_key_hex.clone(), c.label.clone()));
+                                    .map(|c| c.label.clone());
 
                                 // Read and update atomically inside store lock
                                 let state =
@@ -639,13 +624,12 @@ impl CellTransport {
                                                     let snpub = sender_pk
                                                         .to_bech32()
                                                         .unwrap_or_else(|_| sender_pk.to_string());
-                                                    let cell_label = cell_info
-                                                        .as_ref()
-                                                        .map(|(_, l)| l.as_str())
+                                                    let label = cell_label
+                                                        .as_deref()
                                                         .unwrap_or("");
                                                     println!(
                                                         "[{}] {}: {}",
-                                                        cell_label, snpub, plaintext
+                                                        label, snpub, plaintext
                                                     );
                                                 }
                                                 return Ok(false);
@@ -654,26 +638,6 @@ impl CellTransport {
                                     }
                                 }
                                 drop(store);
-
-                                // Legacy fallback
-                                if let Some((cell_key_hex, cell_label)) = cell_info {
-                                    if let Ok(sk) = SecretKey::from_hex(&cell_key_hex) {
-                                        let pk = Keys::new(sk.clone()).public_key();
-                                        if let Ok(plaintext) =
-                                            CryptoProvider::decrypt(&sk, &pk, &rumor.content)
-                                        {
-                                            if sender_pk != keys.public_key() {
-                                                let snpub = sender_pk
-                                                    .to_bech32()
-                                                    .unwrap_or_else(|_| sender_pk.to_string());
-                                                println!(
-                                                    "[{}] {}: {}",
-                                                    cell_label, snpub, plaintext
-                                                );
-                                            }
-                                        }
-                                    }
-                                }
                             }
                         }
                     }
