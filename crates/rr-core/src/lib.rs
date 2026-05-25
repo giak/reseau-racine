@@ -11,5 +11,5 @@ pub use cell::{Cell, CellMember, CellStore, SenderKey};
 pub use cell_transport::CellTransport;
 pub use crypto::CryptoProvider;
 pub use identity::IdentityManager;
-pub use message::MessageService;
+pub use message::{send_message, receive_message};
 pub use transport::nostr::NostrTransport;
