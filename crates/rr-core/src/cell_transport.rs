@@ -346,6 +346,55 @@ impl CellTransport {
         Ok(())
     }
 
+    async fn handle_key_rotation(
+        store: &Arc<tokio::sync::Mutex<CellStore>>,
+        payload: &serde_json::Value,
+        cid: &Uuid,
+    ) {
+        if payload.get("action").and_then(|v| v.as_str()) != Some("key_rotation") {
+            return;
+        }
+        let keys_val = match payload.get("sender_keys").and_then(|v| v.as_array()) {
+            Some(k) => k,
+            None => return,
+        };
+        let new_keys: Vec<SenderKey> = keys_val
+            .iter()
+            .filter_map(|sk_val| {
+                let pk_str = sk_val.get("member_pubkey")?.as_str()?;
+                let pk = PublicKey::from_bech32(pk_str).ok()?;
+                let chain = sk_val.get("chain_key_hex")?.as_str()?;
+                Some(SenderKey {
+                    member_pubkey: pk,
+                    chain_key_hex: chain.to_string(),
+                    msg_count: sk_val.get("msg_count").and_then(|v| v.as_i64()).unwrap_or(0) as u64,
+                    created_at_secs: std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap_or_default()
+                        .as_secs(),
+                })
+            })
+            .collect();
+        if new_keys.is_empty() {
+            return;
+        }
+
+        let mut store = store.lock().await;
+        if let Some(cell) = store.cells.iter_mut().find(|c| c.id == *cid) {
+            for nk in new_keys {
+                if let Some(existing) = cell.sender_keys.iter_mut().find(|sk| sk.member_pubkey == nk.member_pubkey) {
+                    existing.chain_key_hex = nk.chain_key_hex;
+                    existing.msg_count = nk.msg_count;
+                    existing.created_at_secs = nk.created_at_secs;
+                } else {
+                    cell.sender_keys.push(nk);
+                }
+            }
+            let _ = store.save();
+            println!("🔑 Clés de cellule mises à jour (key_rotation)");
+        }
+    }
+
     pub async fn listen(&self, cell_id: Option<&Uuid>) -> Result<(), Box<dyn std::error::Error>> {
         let my_pk = self.keys.public_key();
         let client = self.client.clone();
@@ -465,6 +514,18 @@ impl CellTransport {
                         let mut store = store_arc.lock().await;
 
                         if let Ok(cid) = cell_id_parsed {
+                            // Check for key rotation payload first
+                            if let Ok(payload) =
+                                serde_json::from_str::<serde_json::Value>(&rumor.content)
+                            {
+                                if payload.get("action").and_then(|v| v.as_str()) == Some("key_rotation")
+                                {
+                                    drop(store);
+                                    Self::handle_key_rotation(&store_arc, &payload, &cid).await;
+                                    return Ok(false);
+                                }
+                            }
+
                             if store.find(&cid).is_none() {
                                 // Unknown cell — check if this is a key distribution
                                 if let Ok(payload) =
