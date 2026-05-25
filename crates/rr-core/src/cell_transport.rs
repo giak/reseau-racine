@@ -1,5 +1,6 @@
 use nostr::prelude::*;
 use nostr_sdk::prelude::*;
+use rand::RngCore;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use uuid::Uuid;
@@ -221,6 +222,127 @@ impl CellTransport {
             }
         }
 
+        Ok(())
+    }
+
+    pub async fn remove_member(
+        &self,
+        cell_id: &Uuid,
+        target_pubkey: &PublicKey,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let store = self.store.lock().await;
+        let cell = store
+            .find(cell_id)
+            .ok_or_else(|| format!("Cellule {} introuvable", cell_id))?
+            .clone();
+        let remaining: Vec<&CellMember> = cell.members.iter()
+            .filter(|m| m.pubkey != *target_pubkey)
+            .collect();
+
+        if !remaining.iter().any(|m| m.pubkey == self.keys.public_key()) {
+            return Err("Vous n'êtes pas membre de cette cellule".into());
+        }
+
+        let cell_id_hex = cell.id.to_string();
+        drop(store);
+
+        // Generate fresh Sender Keys for all remaining members
+        let new_keys: Vec<SenderKey> = remaining
+            .iter()
+            .map(|m| {
+                let mut chain = [0u8; 32];
+                rand::rngs::OsRng.fill_bytes(&mut chain);
+                SenderKey {
+                    member_pubkey: m.pubkey,
+                    chain_key_hex: hex::encode(chain),
+                    msg_count: 0,
+                    created_at_secs: std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap_or_default()
+                        .as_secs(),
+                }
+            })
+            .collect();
+
+        // Distribute all new keys to each remaining member
+        let all_keys_payload = serde_json::json!({
+            "action": "key_rotation",
+            "cell_id": cell_id_hex,
+            "sender_keys": new_keys.iter().map(|sk| serde_json::json!({
+                "member_pubkey": sk.member_pubkey.to_bech32().unwrap_or_default(),
+                "chain_key_hex": &sk.chain_key_hex,
+                "msg_count": sk.msg_count,
+            })).collect::<Vec<_>>(),
+            "removed_member": target_pubkey.to_bech32()?,
+        });
+        let payload_str = all_keys_payload.to_string();
+        let cell_id_hex_clone = cell_id_hex.clone();
+        for member in &remaining {
+            self.send_cell_key(&member.pubkey, &payload_str, &cell_id_hex_clone)
+                .await?;
+        }
+
+        // Update local store
+        let mut store = self.store.lock().await;
+        if let Some(cell) = store.cells.iter_mut().find(|c| c.id == *cell_id) {
+            cell.members.retain(|m| m.pubkey != *target_pubkey);
+            cell.sender_keys = new_keys;
+            store.save()?;
+        }
+
+        println!("✅ Membre retiré : {}", target_pubkey.to_bech32()?);
+        Ok(())
+    }
+
+    pub async fn rotate_key(&self, cell_id: &Uuid) -> Result<(), Box<dyn std::error::Error>> {
+        let store = self.store.lock().await;
+        let cell = store
+            .find(cell_id)
+            .ok_or_else(|| format!("Cellule {} introuvable", cell_id))?
+            .clone();
+        let remaining: Vec<PublicKey> = cell.members.iter().map(|m| m.pubkey).collect();
+        let cell_id_hex = cell.id.to_string();
+        drop(store);
+
+        let new_keys: Vec<SenderKey> = remaining
+            .iter()
+            .map(|pk| {
+                let mut chain = [0u8; 32];
+                rand::rngs::OsRng.fill_bytes(&mut chain);
+                SenderKey {
+                    member_pubkey: *pk,
+                    chain_key_hex: hex::encode(chain),
+                    msg_count: 0,
+                    created_at_secs: std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap_or_default()
+                        .as_secs(),
+                }
+            })
+            .collect();
+
+        let payload = serde_json::json!({
+            "action": "key_rotation",
+            "cell_id": cell_id_hex,
+            "sender_keys": new_keys.iter().map(|sk| serde_json::json!({
+                "member_pubkey": sk.member_pubkey.to_bech32().unwrap_or_default(),
+                "chain_key_hex": &sk.chain_key_hex,
+                "msg_count": sk.msg_count,
+            })).collect::<Vec<_>>(),
+        });
+        let payload_str = payload.to_string();
+        let cell_id_hex_clone = cell_id_hex.clone();
+        for pk in &remaining {
+            self.send_cell_key(pk, &payload_str, &cell_id_hex_clone).await?;
+        }
+
+        let mut store = self.store.lock().await;
+        if let Some(cell) = store.cells.iter_mut().find(|c| c.id == *cell_id) {
+            cell.sender_keys = new_keys;
+            store.save()?;
+        }
+
+        println!("✅ Clés de la cellule {} régénérées", cell_id);
         Ok(())
     }
 
