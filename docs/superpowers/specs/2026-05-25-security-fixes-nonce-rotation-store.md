@@ -22,18 +22,24 @@ Trois failles identifiées par l'audit crypto (cf. `docs/superpowers/specs/2026-
 
 Si le processus plante entre 3 et 5, la même `chain_key` est réutilisée au redémarrage → **même `message_key`** → **même nonce** → ChaCha20 keystream identique → XOR des ciphertexts = XOR des plaintexts. Confidentialité détruite.
 
-**Solution choisie :** Inclure `msg_count` dans l'info string HKDF. Ainsi, deux tentatives avec la même `chain_key` mais des `msg_count` différents produisent des clés différentes. Le nonce à zéro reste sûr car même en cas de rollback, la clé change.
+**Solution choisie :** Deux changements combinés :
+
+(a) Inclure `msg_count` dans l'info string HKDF — lie la clé dérivée au compteur de message.
+(b) **Réordonner le save AVANT le réseau** — dans `send_message()`, le store est mis à jour (chain_key_hex + msg_count) et sauvegardé AVANT d'envoyer les gift-wraps. Si le processus crashe pendant l'envoi, le msg_count est déjà consommé → la prochaine tentative utilise un msg_count différent → clé différente.
+
+**Risque :** Un crash pendant l'envoi brûle 1 slot msg_count (sur 2^64). Acceptable comparé à une fuite de confidentialité.
 
 **Détail technique :**
 ```rust
-// Avant :
-let hk = Hkdf::<Sha256>::new(None, chain_key);
-hk.expand(b"rr:group:sender_key:v1", &mut okm);
+// Avant (vulnérable) :
+let (msg_key, next_chain) = ratchet_forward(&chain);
+encrypt + send...  // peut planter ici
+save store...      // jamais atteint si crash
 
-// Après :
-let info = [b"rr:group:sender_key:v1", &msg_count.to_be_bytes()].concat();
-let hk = Hkdf::<Sha256>::new(None, chain_key);
-hk.expand(&info, &mut okm);
+// Après (sûr) :
+let (msg_key, next_chain) = ratchet_forward(&chain, sk.msg_count);
+save store (chain_key = next_chain, msg_count += 1)  // AVANT send
+encrypt + send...
 ```
 
 **Signature ratchet_forward :** `fn ratchet_forward(chain_key: &[u8; 32], msg_count: u64) -> ([u8; 32], [u8; 32])` — ajout du paramètre `msg_count`. 4 tests à mettre à jour.
@@ -49,7 +55,7 @@ hk.expand(&info, &mut okm);
 **Choses à creuser :**
 - `sender_pk` est disponible dans la closure `handle_notifications` (ligne ~560) — déjà extrait via `let sender_pk = unwrapped.sender;`
 - Que faire si le membre retiré n'est plus dans `cell.members` mais était légitime avant ? La rotation est envoyée aux *membres restants*. Si l'ancien membre la reçoit (parce qu'il écoutait encore), il ne doit pas l'appliquer — c'est correct, il n'est plus dans `cell.members`.
-- Logger au niveau `warn!` si un non-membre tente une rotation, pour détection d'attaque.
+- Logger via `eprintln!` (style existant du projet) si un non-membre tente une rotation, pour détection d'attaque.
 - Ajouter un test unitaire : envoyer une `key_rotation` d'un non-membre → l'opération est ignorée, store inchangé.
 
 ### 3. `CellStore::save()` non atomique + corruption silencieuse
@@ -62,8 +68,8 @@ hk.expand(&info, &mut okm);
 
 **Solution :**
 - `save()` : écrire dans `path.tmp`, puis `fs::rename(path.tmp, path)`. Le rename est atomique sur un même filesystem (POSIX).
-- `load()` : si le fichier existe mais ne parse pas, logger `error!()` AVEC le message d'erreur (contient le contexte, pas le contenu). Retourner `CellStore::default()` comme avant (graceful degradation).
-- Ajouter `log` / `tracing` comme dépendance si pas déjà présente.
+- `load()` : si un fichier `.tmp` existe (crash précédent), le supprimer. Si `cells.json` existe mais ne parse pas, logger `eprintln!` AVEC le message d'erreur. Retourner `CellStore::default()` (graceful degradation).
+- Logger les erreurs via `eprintln!` (pas de dépendance `log`).
 
 ## Fichiers impactés
 
@@ -73,12 +79,11 @@ hk.expand(&info, &mut okm);
 | `crates/rr-core/src/cell_transport.rs` | Ordre atomique ratchet, `sender_pk` check dans handle_key_rotation |
 | `crates/rr-core/src/cell.rs` | `save()` atomique, `load()` log erreur |
 | `crates/rr-core/tests/sender_key.rs` | Mise à jour 4 tests (nouveau param `msg_count`) |
-| `crates/rr-core/Cargo.toml` | Ajout `log` si absent |
 
 ## Tests
 
 - `sender_key::ratchet_forward()` avec `msg_count=0` et `msg_count=1` produisent des clés différentes (même `chain_key`)
-- `handle_key_rotation()` depuis un non-membre → store non modifié, warning log
+- `handle_key_rotation()` depuis un non-membre → store non modifié, eprintln! warning
 - `CellStore::save()` → fichier existe, contient JSON valide (vérifier via load)
 - `CellStore::load()` fichier corrompu → log erreur, retourne store vide (comportement actuel)
 
@@ -93,4 +98,4 @@ hk.expand(&info, &mut okm);
 
 ## Dépendances
 
-Aucune. Travaille dans le code existant sans nouveau module.
+Aucune. Travaille dans le code existant sans nouveau module. Pas de dépendance `log` — utilisation de `eprintln!` (style existant).
