@@ -86,6 +86,8 @@ Des critères de succès forts permettent de boucler indépendamment. Des critè
 
 8 status checks requis : `lint`, `test`, `audit`, `fuzz`, `udeps`, `check-cross (macos-latest)`, `check-cross (windows-latest)`, `build-cli`.
 
+**CI optimisé** : path filtering via `dorny/paths-filter` — PR docs-only skip tous les jobs (~30s). `cancel-in-progress: true` annule les runs obsolètes sur force-push.
+
 ```
 feature/<scope> → PR → CI green → sync markdowns (TRACKING, README, GUIDE, specs, plans) → squash merge → main
 ```
