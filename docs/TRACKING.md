@@ -16,6 +16,7 @@
 ██████████  EPIC 8  — Performance             ✅  4/4   Benchmarks système
 ██████████  EPIC 9  — Simulation charge       ✅  4/4   rr-stress load testing
 ████░░░░░░  SEC-1   — Sécurité Fixes          ✅  4/4   Nonce, rotation, store atomique
+██████████  CLEAN-1 — Code mort               ✅  4/4   CryptoProvider, MessageService, TransportProvider, legacy path
 ```
 
 ---
@@ -395,6 +396,40 @@ Corrections de sécurité P0 : nonce ChaCha20, authenticité rotation de clés, 
 
 **Spec :** `docs/superpowers/specs/2026-05-25-security-fixes-nonce-rotation-store.md`
 **Plan :** `docs/superpowers/plans/2026-05-25-security-fixes-nonce-rotation-store.md`
+
+---
+
+## CLEAN-1 — Code Mort ✅ (4/4)
+
+Suppression de 4 artéfacts de code mort : `CryptoProvider`, `MessageService`, `TransportProvider`, legacy NIP-44 path.
+
+| Story | Status | Détail |
+|-------|--------|--------|
+| `MessageService` struct → fonctions libres | ✅ | `send_message()` et `receive_message()` libres, plus de struct fantôme |
+| `TransportProvider` trait supprimé | ✅ | Trait mort avec 1 seule impl, jamais utilisé génériquement |
+| Legacy NIP-44 path retiré de `listen()` | ✅ | ~50 lignes de code inaccessible (cell_key_hex toujours vide) |
+| `CryptoProvider` wrapper supprimé | ✅ | Appels `nip44` directs, -64 lignes, comportement identique |
+| `cell_key_hex` → `#[serde(default)]` | ✅ | Rétrocompat désérialisation, plus utilisé en écriture |
+
+### Qualité
+
+| Métrique | Status |
+|----------|--------|
+| Tests | ✅ 52/52 pass (inchangé) |
+| Clippy | ✅ 0 warnings |
+| Fmt | ✅ clean |
+| Build CLI | ✅ release |
+
+### Décisions architecturales
+
+| Décision | Justification |
+|----------|---------------|
+| Fonctions libres > struct sans état | Pas de `new()`, pas de `Default`, pas de `self` — juste des fonctions pures |
+| `#[serde(default)]` conservé pour `cell_key_hex` | Permet de lire les vieux fichiers `cells.json` sans erreur |
+| `cell_key_hex: String::new()` conservé dans `create_cell` | Nécessaire pour le struct literal Rust (`#[serde(default)]` = désérialisation seulement) |
+
+**Spec :** `docs/superpowers/specs/2026-05-25-dead-code-removal.md`
+**Plan :** `docs/superpowers/plans/2026-05-25-clean-1-dead-code-removal.md`
 
 ---
 
