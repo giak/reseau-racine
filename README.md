@@ -324,6 +324,7 @@ docker compose -f .devcontainer/compose.yaml logs -f nostr-relay
 | 3 | ⬜ | Reticulum WiFi (transport mesh) |
 | 4 | ⬜ | Interface graphique (Tauri) |
 | 6 | ⬜ | Nœud relais embarqué |
+| SEC-1 | ✅ | Sécurité Fixes : nonce ChaCha20, auth rotation, store atomique |
 
 ---
 

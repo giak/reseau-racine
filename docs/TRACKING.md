@@ -6,7 +6,7 @@
 
 ```
 ██████████  EPIC 0  — Fondations              ✅  35/35  (100%)
-████████░░  EPIC 1  — Message chiffré NIP-17  ✅   5/5   (100%)
+████░░░░░░  EPIC 1  — Message chiffré NIP-17  ✅   5/5   (100%)
 ██████████  EPIC 2  — Groupes & cellules      ✅   7/7   (100%)
 ░░░░░░░░░░  EPIC 3  — Reticulum WiFi          ⬜  —
 ░░░░░░░░░░  EPIC 4  — Client Tauri            ⬜  —
@@ -15,6 +15,7 @@
 ████████░░  EPIC 7  — Sécurité CLI            ✅  4/4   KeePassXC vault
 ██████████  EPIC 8  — Performance             ✅  4/4   Benchmarks système
 ██████████  EPIC 9  — Simulation charge       ✅  4/4   rr-stress load testing
+████░░░░░░  SEC-1   — Sécurité Fixes          ✅  4/4   Nonce, rotation, store atomique
 ```
 
 ---
@@ -359,6 +360,41 @@ Outil de stress test pour valider le comportement sous charge.
 | Test 50 users sur relais local | ⬜ | Valider le goulet nostr-rs-relay |
 
 **Spec :** `docs/superpowers/specs/2026-05-23-stress-load-simulation.md`
+
+---
+
+---
+
+## SEC-1 — Sécurité Fixes ✅ (4/4)
+
+Corrections de sécurité P0 : nonce ChaCha20, authenticité rotation de clés, atomicité du store.
+
+| Story | Status | Détail |
+|-------|--------|--------|
+| msg_count dans HKDF info string | ✅ | `ratchet_forward(chain, msg_count)` — nonce unique même si même chain_key réutilisé |
+| Save store BEFORE network send | ✅ | `send_message` : update store → save → drop(lock) → send. Crash safe. |
+| Listen race fix (mode 1+2) | ✅ | `msg_count` + `chain_key_hex` lus sous lock store (pas de clone stale) |
+| `handle_key_rotation(sender_pk)` auth | ✅ | Vérifie sender ∈ cell.members sous le même lock que l'update (TOCTOU fixé) |
+| CellStore atomique (.tmp+rename) | ✅ | `save()` écrit `.tmp` → `rename`. `load()` nettoie `.tmp`, log erreurs parse |
+
+### Qualité
+
+| Métrique | Status |
+|----------|--------|
+| Tests | ✅ 8/8 pass (3 cell_store + 5 sender_key) |
+| Clippy | ✅ 0 warnings |
+| Build CLI | ✅ release |
+
+### Décisions architecturales
+
+| Décision | Justification |
+|----------|---------------|
+| `eprintln!` pour erreurs store (pas `log` crate) | Pas de dépendance log introduite (cohérent avec code existant) |
+| msg_count.to_be_bytes() dans info string HKDF | Compatible little/big-endian, déterministe, 8 bytes suffisent |
+| Rename atomique POSIX (meme filesystem) | Garantie atomique sur Linux/ macOS, crash = perte .tmp seulement |
+
+**Spec :** `docs/superpowers/specs/2026-05-25-security-fixes-nonce-rotation-store.md`
+**Plan :** `docs/superpowers/plans/2026-05-25-security-fixes-nonce-rotation-store.md`
 
 ---
 
