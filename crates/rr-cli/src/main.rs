@@ -6,7 +6,7 @@ use nostr_sdk::{Filter, RelayPoolNotification};
 use rr_core::cell::CellStore;
 use rr_core::config::Config;
 use rr_core::identity::{Identity, IdentityManager, KeySource};
-use rr_core::message::MessageService;
+use rr_core::message::{receive_message, send_message};
 use rr_core::transport::nostr::NostrTransport;
 use rr_core::CellTransport;
 use std::io::{self, Write};
@@ -445,11 +445,7 @@ async fn cmd_send(contact: &str, message: &str) {
     };
 
     // Envoyer
-    let msg_service = MessageService::new();
-    match msg_service
-        .send(transport.client(), receiver_pubkey, message)
-        .await
-    {
+    match send_message(transport.client(), receiver_pubkey, message).await {
         Ok(event_id) => {
             println!("✅ Message envoyé à {} sur {}", contact, relay);
             println!("   Event ID: {}", event_id.to_hex());
@@ -523,7 +519,7 @@ async fn cmd_sync() {
         .handle_notifications(|notification| async {
             if let RelayPoolNotification::Event { event, .. } = notification {
                 if event.kind == Kind::GiftWrap {
-                    match MessageService::new().receive(&client, &event).await {
+                    match receive_message(&client, &event).await {
                         Ok(UnwrappedGift { rumor, sender }) => {
                             if rumor.kind == Kind::PrivateDirectMessage {
                                 let sender_npub =
