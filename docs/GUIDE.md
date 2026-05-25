@@ -81,7 +81,69 @@ Le message est :
 
 Si Alice est connectée, elle le reçoit en temps réel.
 
-## Recevoir des messages
+## Groupes (salons chiffrés)
+
+Tu peux créer des groupes chiffrés de 3 à 5 personnes. Chaque message est chiffré avec une clé unique par message (Sender Key — forward secrecy).
+
+### Créer un groupe
+
+```bash
+rr group create --label "Famille" --members npub1alice...,npub1bob...
+```
+
+### Voir tes groupes
+
+```bash
+rr group list
+```
+
+### Détails d'un groupe
+
+```bash
+rr group info <cell_id>
+```
+
+### Envoyer un message dans un groupe
+
+```bash
+rr group send <cell_id> --message "Salut tout le monde !"
+```
+
+### Recevoir les messages d'un groupe
+
+```bash
+rr group listen <cell_id>
+```
+
+Tu peux aussi lancer sans argument pour le mode découverte (nouveaux groupes auto-créés) :
+
+```bash
+rr group listen
+```
+
+### Inviter quelqu'un
+
+```bash
+rr group invite <cell_id> --member npub1charlie...
+```
+
+### Retirer un membre (clés régénérées pour les autres)
+
+```bash
+rr group remove <cell_id> --member npub1bob...
+```
+
+Le membre retiré ne peut plus déchiffrer les nouveaux messages (rotation de clés).
+
+### Régénérer les clés manuellement
+
+```bash
+rr group rotate-key <cell_id>
+```
+
+Utile si tu soupçonnes une clé compromise.
+
+## Recevoir des messages individuels
 
 ```bash
 rr sync

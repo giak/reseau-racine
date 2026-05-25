@@ -6,14 +6,14 @@
 |------|--------|-------------|
 | 0 | ✅ | Fondations : CI/CD, DevContainer, sécurité, qualité |
 | 1 | ✅ | Message chiffré NIP-17 (GiftWrap) |
-| 2 | ⬜ | Groupes & cellules |
+| 2 | ✅ | Groupes & cellules (Sender Keys, rotation) |
 | 3 | ⬜ | Reticulum WiFi |
 | 4 | 🔴 | Client Tauri (bloqué GTK) |
-| 5 | ⬜ | Forward Secrecy |
+| 5 | ✅ | Forward Secrecy (HKDF ratchet + ChaCha20-Poly1305) |
 | 6 | ⬜ | Nœud relais |
 | 7 | ✅ | Sécurité CLI : vault KeePassXC |
-| 8 | ⬜ | Performance : benchmarks |
-| 9 | ⬜ | Simulation charge : rr-stress |
+| 8 | ✅ | Performance : benchmarks |
+| 9 | ✅ | Simulation charge : rr-stress |
 
 ## 1. Vue d'ensemble
 
@@ -26,7 +26,8 @@ graph TB
         SEND["rr send"]
         SYNC["rr sync"]
         RESTORE["rr restore"]
-        BENCH["rr bench ⬜"]
+        BENCH["rr bench ✅"]
+        GROUP["rr group<br/>create/list/info/invite/send<br/>listen/remove/rotate-key"]
     end
 
     subgraph CORE["rr-core (library)"]
@@ -35,9 +36,11 @@ graph TB
         MSG["MessageService<br/>send / receive"]
         TRANS["NostrTransport<br/>connect / wait_for_connection"]
         KEYSTORE["KeySource ✅<br/>file / keepassxc / keepass-rs"]
+        CELL["CellTransport ✅<br/>create / invite / send / listen<br/>remove_member / rotate_key"]
+        SK["SenderKey ✅<br/>HKDF ratchet + ChaCha20"]
     end
 
-    subgraph STRESS["rr-stress (binary) ⬜"]
+    subgraph STRESS["rr-stress (binary) ✅"]
         LOAD["Load simulation<br/>N users, N messages"]
         METRICS["Métriques<br/>p50/p95/p99/success"]
     end
@@ -73,7 +76,8 @@ graph TD
     SEND_CMD["rr send <alias> <message><br/>→ NIP-17 GiftWrap"]
     SYNC_CMD["rr sync<br/>→ subscribe kind 1059 en temps réel"]
     RESTORE_CMD["rr restore <mnemonic><br/>→ restaure identité BIP-39"]
-    BENCH_CMD["rr bench ⬜<br/>→ benchmarks système"]
+    BENCH_CMD["rr bench ✅<br/>→ benchmarks système"]
+    GROUP_CMD["rr group<br/>→ 8 sous-commandes</br>create/list/info/invite</br>send/listen/remove/rotate-key"]
 
     RR --> INIT
     RR --> ID_CMD
@@ -83,6 +87,7 @@ graph TD
     RR --> SYNC_CMD
     RR --> RESTORE_CMD
     RR --> BENCH_CMD
+    RR --> GROUP_CMD
 ```
 
 ## 3. DevContainer
@@ -386,17 +391,27 @@ reseau-racine/
 │   └── ci.yml                # 13 jobs, 8 status checks
 ├── crates/
 │   ├── rr-cli/
-│   │   └── src/main.rs       # clap CLI routing
+│   │   └── src/main.rs       # clap CLI routing (8 group commands)
 │   ├── rr-core/
 │   │   ├── src/
 │   │   │   ├── lib.rs
 │   │   │   ├── identity.rs   # IdentityManager, KeySource
 │   │   │   ├── message.rs    # MessageService (send/receive)
+│   │   │   ├── cell.rs       # Cell, CellMember, SenderKey types
+│   │   │   ├── cell_transport.rs # Group transport (GiftWrap broadcast)
+│   │   │   ├── sender_key.rs # HKDF ratchet + ChaCha20-Poly1305
+│   │   │   ├── crypto.rs     # NIP-44 self-DH legacy
 │   │   │   └── transport/
 │   │   │       └── nostr.rs  # NostrTransport
+│   │   ├── tests/
+│   │   │   ├── cell_crypto.rs    # Legacy NIP-44 group tests
+│   │   │   ├── cell_store.rs     # CellStore serialization (7 tests)
+│   │   │   ├── cell_transport.rs # Integration test (ignored sans relay)
+│   │   │   ├── sender_key.rs     # HKDF + ChaCha20 roundtrip (4 tests)
+│   │   │   └── ...
 │   │   └── fuzz/
 │   │       └── fuzz_targets/ # 3 targets
-│   ├── rr-stress/ ⬜          # Load simulation
+│   ├── rr-stress/ ✅           # Load simulation
 │   └── rr-tauri/ 🔴           # Tauri v2 (GTK bloqué)
 ├── docs/
 │   ├── ARCHITECTURE.md        # Ce fichier
@@ -419,6 +434,8 @@ graph RL
         IDENTITY["identity.rs"]
         MESSAGE["message.rs"]
         TRANSPORT["transport/nostr.rs"]
+        CELL["cell.rs / cell_transport.rs ✅"]
+        SK["sender_key.rs ✅"]
     end
 
     subgraph EXTERNAL["Externe (Cargo.toml)"]
@@ -426,6 +443,8 @@ graph RL
         N44["nostr::nips::nip44"]
         N59["nostr::nips::nip59"]
         KP["keepass-rs ✅<br/>lecture KDBX"]
+        CHACHA["chacha20poly1305 ✅<br/>Sender Key crypto"]
+        HKDF["hkdf + sha2 ✅<br/>ratchet forward"]
     end
 
     subgraph KEYCHAIN["KeePassXC"]
@@ -436,6 +455,11 @@ graph RL
     MAIN --> MESSAGE
     MAIN --> IDENTITY
     MAIN --> TRANSPORT
+    MAIN --> CELL
+    CELL --> SK
+    CELL --> TRANSPORT
+    SK --> CHACHA
+    SK --> HKDF
     MESSAGE --> TRANSPORT
     MESSAGE --> NS
     IDENTITY --> NS
@@ -446,24 +470,13 @@ graph RL
     IDENTITY -.-> CLI_XC_EXT
 ```
 
-## 14. Planned architecture ⬜ (EPICs 2-6)
+## 14. Planned architecture (EPICs 3, 4, 6)
 
 ```mermaid
 graph LR
-    subgraph EPIC2["EPIC 2 — Groupes"]
-        GRP_KEY["NIP-44 + clé de groupe X25519"]
-        CELL["Cellules de 3 (gift-wrap broadcast)"]
-        INVITE["Invitation / join"]
-    end
-
     subgraph EPIC3["EPIC 3 — Reticulum"]
         RNP["Transport Reticulum (RNP)"]
         SWITCH["Bascule auto Nostr ↔ Reticulum"]
-    end
-
-    subgraph EPIC5["EPIC 5 — Forward Secrecy"]
-        DR["Double Ratchet"]
-        ZERO_MEM["Zeroize mémoire"]
     end
 
     subgraph EPIC6["EPIC 6 — Relais"]
@@ -472,8 +485,6 @@ graph LR
         WAN["Configuration WAN"]
     end
 
-    EPIC2 --> CORE["rr-core (future)"]
-    EPIC3 --> CORE
-    EPIC5 --> CORE
+    EPIC3 --> CORE["rr-core"]
     EPIC6 --> RELAY_NODE["rr-relay ⬜"]
 ```

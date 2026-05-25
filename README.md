@@ -136,7 +136,80 @@ NIP-17 (GiftWrap) garantit que même le relais ne sait pas qui parle à qui.
 
 ---
 
-## 6. Restaurer une identité
+## 6. Groupes (cellules chiffrées)
+
+Communication chiffrée en petit groupe (3-5 membres) avec clé partagée X25519 + Sender Keys (Signal-style) pour le forward secrecy par message.
+
+### Créer une cellule
+
+```bash
+./scripts/dev.sh cargo run --package rr-cli -- group create --label "Famille" --members npub1bob...,npub1alice...
+```
+
+### Lister ses cellules
+
+```bash
+./scripts/dev.sh cargo run --package rr-cli -- group list
+```
+
+### Détails d'une cellule
+
+```bash
+./scripts/dev.sh cargo run --package rr-cli -- group info <cell_id>
+```
+
+### Inviter un membre
+
+```bash
+./scripts/dev.sh cargo run --package rr-cli -- group invite <cell_id> --member npub1charlie...
+```
+
+### Envoyer un message
+
+```bash
+./scripts/dev.sh cargo run --package rr-cli -- group send <cell_id> --message "Salut tout le monde !"
+```
+
+### Écouter les messages
+
+```bash
+# Écouter une cellule spécifique
+./scripts/dev.sh cargo run --package rr-cli -- group listen <cell_id>
+
+# Mode découverte (auto-crée les cellules inconnues)
+./scripts/dev.sh cargo run --package rr-cli -- group listen
+```
+
+### Retirer un membre (avec rotation de clés)
+
+```bash
+./scripts/dev.sh cargo run --package rr-cli -- group remove <cell_id> --member npub1bob...
+```
+
+### Régénérer les clés manuellement
+
+```bash
+./scripts/dev.sh cargo run --package rr-cli -- group rotate-key <cell_id>
+```
+
+Architecture :
+
+```
+┌─ Cellule ───────────────────────────────────────┐
+│  Clé partagée X25519 (legacy)                   │
+│  + Sender Keys (ratchet HKDF-SHA256 par membre) │
+│                                                  │
+│  ┌─ Message ─────────────────────────────────┐  │
+│  │ ChaCha20-Poly1305 (nonce=0, clé unique)   │  │
+│  │ Rumor kind 13, tag h = cell UUID          │  │
+│  │ Gift-wrap kind 1059 par destinataire      │  │
+│  └────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────┘
+```
+
+---
+
+## 7. Restaurer une identité
 
 ```bash
 ./scripts/dev.sh cargo run --package rr-cli -- restore "oiseau montagne clé stylo arbre fenêtre livre nuage soleil rivière lac porte"
@@ -146,7 +219,7 @@ La seed phrase de 12 mots régénère exactement la même paire de clés.
 
 ---
 
-## 7. KeePassXC (coffre-fort de clés)
+## 8. KeePassXC (coffre-fort de clés)
 
 Par défaut, la clé privée est stockée en clair dans `~/.local/share/reseau-racine/keys.json`.
 Pour une sécurité renforcée, `rr` peut stocker les clés dans une base KeePassXC.
@@ -174,19 +247,23 @@ définit le backend : `file`, `keepassxc://<db>/<entry>`, ou `keepass-rs://<db>/
 
 ---
 
-## 8. Développer
+## 9. Développer
 
 ### Architecture du code
 
 ```
 crates/
-├── rr-core/          # Bibliothèque fondamentale
-│   ├── crypto.rs     # Chiffrement NIP-44
-│   ├── identity.rs   # Clés, seed phrase, nsec/npub
-│   ├── message.rs    # NIP-17 (Rumor → Seal → GiftWrap)
-│   └── transport/    # Connexion aux relais Nostr
-├── rr-cli/           # Interface en ligne de commande
-└── rr-tauri/         # Application de bureau (Tauri v2)
+├── rr-core/               # Bibliothèque fondamentale
+│   ├── crypto.rs          # Chiffrement NIP-44
+│   ├── identity.rs        # Clés, seed phrase, nsec/npub
+│   ├── message.rs         # NIP-17 (Rumor → Seal → GiftWrap)
+│   ├── cell.rs            # Cellules de groupe (Cell, CellMember, SenderKey)
+│   ├── cell_transport.rs  # Transport cellules (create, invite, send, listen, remove, rotate)
+│   ├── sender_key.rs      # HKDF ratchet + ChaCha20-Poly1305 per-message
+│   └── transport/         # Connexion aux relais Nostr
+├── rr-cli/                # Interface en ligne de commande
+├── rr-stress/             # Simulation de charge (benchmarks)
+└── rr-tauri/              # Application de bureau (Tauri v2)
 ```
 
 ### Lancer les tests
@@ -222,7 +299,7 @@ docker compose -f .devcontainer/compose.yaml logs -f nostr-relay
 
 ---
 
-## 9. Dépannage
+## 10. Dépannage
 
 | Symptôme | Cause | Solution |
 |----------|-------|----------|
@@ -235,13 +312,18 @@ docker compose -f .devcontainer/compose.yaml logs -f nostr-relay
 
 ## Feuille de route
 
-- **Phase 0** — Fondations : crypto, identité, transport Nostr ✓
-- **EPIC 1** — Messagerie P2P : envoi/sync via NIP-17 ✓
-- **EPIC 7** — KeePassXC vault : sécurité des clés ✓
-- **EPIC 2** — Contacts et discovery
-- **EPIC 3** — Groupes et salons
-- **EPIC 4** — Interface graphique (Tauri)
-- **EPIC 5** — Version mobile
+| EPIC | Status | Description |
+|------|--------|-------------|
+| 0 | ✅ | Fondations : crypto, identité, CI/CD, sécurité |
+| 1 | ✅ | Messagerie P2P : envoi/sync via NIP-17 |
+| 2 | ✅ | Groupes & cellules (Sender Keys, rotation) |
+| 5 | ✅ | Forward Secrecy (HKDF ratchet + ChaCha20-Poly1305) |
+| 7 | ✅ | KeePassXC vault : sécurité des clés |
+| 8 | ✅ | Benchmarks performance |
+| 9 | ✅ | Simulation charge (rr-stress) |
+| 3 | ⬜ | Reticulum WiFi (transport mesh) |
+| 4 | ⬜ | Interface graphique (Tauri) |
+| 6 | ⬜ | Nœud relais embarqué |
 
 ---
 
