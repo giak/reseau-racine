@@ -1,0 +1,41 @@
+name: Full Suite (PR Stub)
+
+on:
+  pull_request_target:
+    branches: [main]
+
+permissions: {}
+
+jobs:
+  check-cross:
+    name: check-cross (${{ matrix.os }})
+    strategy:
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "stub — real check runs on merge_group"
+
+  audit:
+    name: audit
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "stub — real check runs on merge_group"
+
+  fuzz:
+    name: fuzz (${{ matrix.target }})
+    strategy:
+      matrix:
+        target:
+          - fuzz_nip44_roundtrip
+          - fuzz_nip44_decrypt
+          - fuzz_identity_parse
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "stub — real check runs on merge_group"
+
+  udeps:
+    name: udeps
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "stub — real check runs on merge_group"
