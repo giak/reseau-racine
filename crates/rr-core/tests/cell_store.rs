@@ -118,7 +118,12 @@ fn test_cell_with_multiple_sender_keys() {
             created_at_secs: 1700000001,
         },
     ];
-    let cell = Cell::new("multi-sk", "key".to_string(), keys, vec![CellMember::new(dummy_pk(), None)]);
+    let cell = Cell::new(
+        "multi-sk",
+        "key".to_string(),
+        keys,
+        vec![CellMember::new(dummy_pk(), None)],
+    );
     let mut store = CellStore::default();
     store.add(cell);
     let json = serde_json::to_string_pretty(&store).unwrap();

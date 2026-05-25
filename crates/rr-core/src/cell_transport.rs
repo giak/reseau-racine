@@ -190,14 +190,19 @@ impl CellTransport {
                 .build(self.keys.public_key());
 
             for member_pk in &members {
-                let wrap = EventBuilder::gift_wrap(&self.keys, member_pk, rumor.clone(), []).await?;
+                let wrap =
+                    EventBuilder::gift_wrap(&self.keys, member_pk, rumor.clone(), []).await?;
                 self.client.send_event(&wrap).await?;
             }
 
             // Update chain key in store
             let mut store = self.store.lock().await;
             if let Some(cell) = store.cells.iter_mut().find(|c| c.id == *cell_id) {
-                if let Some(sk) = cell.sender_keys.iter_mut().find(|sk| sk.member_pubkey == my_pk) {
+                if let Some(sk) = cell
+                    .sender_keys
+                    .iter_mut()
+                    .find(|sk| sk.member_pubkey == my_pk)
+                {
                     sk.chain_key_hex = hex::encode(next_chain);
                     sk.msg_count += 1;
                 }
@@ -217,7 +222,8 @@ impl CellTransport {
                 .build(self.keys.public_key());
 
             for member_pk in &members {
-                let wrap = EventBuilder::gift_wrap(&self.keys, member_pk, rumor.clone(), []).await?;
+                let wrap =
+                    EventBuilder::gift_wrap(&self.keys, member_pk, rumor.clone(), []).await?;
                 self.client.send_event(&wrap).await?;
             }
         }
@@ -235,7 +241,9 @@ impl CellTransport {
             .find(cell_id)
             .ok_or_else(|| format!("Cellule {} introuvable", cell_id))?
             .clone();
-        let remaining: Vec<&CellMember> = cell.members.iter()
+        let remaining: Vec<&CellMember> = cell
+            .members
+            .iter()
             .filter(|m| m.pubkey != *target_pubkey)
             .collect();
 
@@ -333,7 +341,8 @@ impl CellTransport {
         let payload_str = payload.to_string();
         let cell_id_hex_clone = cell_id_hex.clone();
         for pk in &remaining {
-            self.send_cell_key(pk, &payload_str, &cell_id_hex_clone).await?;
+            self.send_cell_key(pk, &payload_str, &cell_id_hex_clone)
+                .await?;
         }
 
         let mut store = self.store.lock().await;
@@ -367,7 +376,10 @@ impl CellTransport {
                 Some(SenderKey {
                     member_pubkey: pk,
                     chain_key_hex: chain.to_string(),
-                    msg_count: sk_val.get("msg_count").and_then(|v| v.as_i64()).unwrap_or(0) as u64,
+                    msg_count: sk_val
+                        .get("msg_count")
+                        .and_then(|v| v.as_i64())
+                        .unwrap_or(0) as u64,
                     created_at_secs: std::time::SystemTime::now()
                         .duration_since(std::time::UNIX_EPOCH)
                         .unwrap_or_default()
@@ -382,7 +394,11 @@ impl CellTransport {
         let mut store = store.lock().await;
         if let Some(cell) = store.cells.iter_mut().find(|c| c.id == *cid) {
             for nk in new_keys {
-                if let Some(existing) = cell.sender_keys.iter_mut().find(|sk| sk.member_pubkey == nk.member_pubkey) {
+                if let Some(existing) = cell
+                    .sender_keys
+                    .iter_mut()
+                    .find(|sk| sk.member_pubkey == nk.member_pubkey)
+                {
                     existing.chain_key_hex = nk.chain_key_hex;
                     existing.msg_count = nk.msg_count;
                     existing.created_at_secs = nk.created_at_secs;
@@ -461,7 +477,10 @@ impl CellTransport {
                             }
 
                             // Try Sender Key decryption first
-                            if let Some(sk) = cell_sender_keys.iter().find(|sk| sk.member_pubkey == sender_pk) {
+                            if let Some(sk) = cell_sender_keys
+                                .iter()
+                                .find(|sk| sk.member_pubkey == sender_pk)
+                            {
                                 let mut chain = [0u8; 32];
                                 if hex::decode_to_slice(&sk.chain_key_hex, &mut chain).is_ok() {
                                     let (msg_key, next_chain) = sender_key::ratchet_forward(&chain);
@@ -470,11 +489,22 @@ impl CellTransport {
                                         let engine = base64::engine::general_purpose::STANDARD;
                                         engine.decode(&rumor.content)
                                     } {
-                                        if let Ok(plaintext) = sender_key::decrypt_with_message_key(&msg_key, &cipher_bytes) {
+                                        if let Ok(plaintext) = sender_key::decrypt_with_message_key(
+                                            &msg_key,
+                                            &cipher_bytes,
+                                        ) {
                                             // Update chain in store
                                             let mut store = store_arc.lock().await;
-                                            if let Some(cell) = store.cells.iter_mut().find(|c| c.id.to_string() == h_tag) {
-                                                if let Some(sk) = cell.sender_keys.iter_mut().find(|sk| sk.member_pubkey == sender_pk) {
+                                            if let Some(cell) = store
+                                                .cells
+                                                .iter_mut()
+                                                .find(|c| c.id.to_string() == h_tag)
+                                            {
+                                                if let Some(sk) = cell
+                                                    .sender_keys
+                                                    .iter_mut()
+                                                    .find(|sk| sk.member_pubkey == sender_pk)
+                                                {
                                                     sk.chain_key_hex = hex::encode(next_chain);
                                                     sk.msg_count += 1;
                                                 }
@@ -518,7 +548,8 @@ impl CellTransport {
                             if let Ok(payload) =
                                 serde_json::from_str::<serde_json::Value>(&rumor.content)
                             {
-                                if payload.get("action").and_then(|v| v.as_str()) == Some("key_rotation")
+                                if payload.get("action").and_then(|v| v.as_str())
+                                    == Some("key_rotation")
                                 {
                                     drop(store);
                                     Self::handle_key_rotation(&store_arc, &payload, &cid).await;
@@ -560,21 +591,41 @@ impl CellTransport {
                                     drop(store);
 
                                     // Try Sender Key first
-                                    if let Some(sk) = cell.sender_keys.iter().find(|sk| sk.member_pubkey == sender_pk) {
+                                    if let Some(sk) = cell
+                                        .sender_keys
+                                        .iter()
+                                        .find(|sk| sk.member_pubkey == sender_pk)
+                                    {
                                         let mut chain = [0u8; 32];
-                                        if hex::decode_to_slice(&sk.chain_key_hex, &mut chain).is_ok() {
-                                            let (msg_key, next_chain) = sender_key::ratchet_forward(&chain);
+                                        if hex::decode_to_slice(&sk.chain_key_hex, &mut chain)
+                                            .is_ok()
+                                        {
+                                            let (msg_key, next_chain) =
+                                                sender_key::ratchet_forward(&chain);
                                             if let Ok(cipher_bytes) = {
                                                 use base64::Engine as _;
-                                                let engine = base64::engine::general_purpose::STANDARD;
+                                                let engine =
+                                                    base64::engine::general_purpose::STANDARD;
                                                 engine.decode(&rumor.content)
                                             } {
-                                                if let Ok(plaintext) = sender_key::decrypt_with_message_key(&msg_key, &cipher_bytes) {
+                                                if let Ok(plaintext) =
+                                                    sender_key::decrypt_with_message_key(
+                                                        &msg_key,
+                                                        &cipher_bytes,
+                                                    )
+                                                {
                                                     // Update chain in store
                                                     let mut store = store_arc.lock().await;
-                                                    if let Some(c) = store.cells.iter_mut().find(|c| c.id == cid) {
-                                                        if let Some(sk) = c.sender_keys.iter_mut().find(|sk| sk.member_pubkey == sender_pk) {
-                                                            sk.chain_key_hex = hex::encode(next_chain);
+                                                    if let Some(c) =
+                                                        store.cells.iter_mut().find(|c| c.id == cid)
+                                                    {
+                                                        if let Some(sk) =
+                                                            c.sender_keys.iter_mut().find(|sk| {
+                                                                sk.member_pubkey == sender_pk
+                                                            })
+                                                        {
+                                                            sk.chain_key_hex =
+                                                                hex::encode(next_chain);
                                                             sk.msg_count += 1;
                                                         }
                                                     }
@@ -582,9 +633,10 @@ impl CellTransport {
                                                     drop(store);
 
                                                     if sender_pk != keys.public_key() {
-                                                        let snpub = sender_pk
-                                                            .to_bech32()
-                                                            .unwrap_or_else(|_| sender_pk.to_string());
+                                                        let snpub =
+                                                            sender_pk.to_bech32().unwrap_or_else(
+                                                                |_| sender_pk.to_string(),
+                                                            );
                                                         println!(
                                                             "[{}] {}: {}",
                                                             cell.label, snpub, plaintext
