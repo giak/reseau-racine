@@ -4,7 +4,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
-use crate::cell::{Cell, CellMember, CellStore};
+use crate::cell::{Cell, CellMember, CellStore, SenderKey};
 use crate::sender_key;
 use crate::CryptoProvider;
 
@@ -28,9 +28,25 @@ impl CellTransport {
         label: &str,
         member_pubkeys: &[PublicKey],
     ) -> Result<Cell, Box<dyn std::error::Error>> {
-        let cell_keys = Keys::generate();
-        let cell_sk_hex = cell_keys.secret_key().to_secret_hex();
         let sender_pk = self.keys.public_key();
+
+        // Generate own Sender Key
+        let chain_key = {
+            use rand::RngCore;
+            let mut key = [0u8; 32];
+            rand::rngs::OsRng.fill_bytes(&mut key);
+            key
+        };
+
+        let sender_key = SenderKey {
+            member_pubkey: sender_pk,
+            chain_key_hex: hex::encode(chain_key),
+            msg_count: 0,
+            created_at_secs: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs(),
+        };
 
         let mut members: Vec<CellMember> = member_pubkeys
             .iter()
@@ -38,14 +54,28 @@ impl CellTransport {
             .collect();
         members.push(CellMember::new(sender_pk, Some("me".to_string())));
 
-        let cell = Cell::new(label, cell_sk_hex, Vec::new(), members);
+        let cell = Cell {
+            id: Uuid::new_v4(),
+            label: label.to_string(),
+            cell_key_hex: String::new(),
+            sender_keys: vec![sender_key.clone()],
+            members,
+            created_at_secs: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs(),
+        };
+
         let cell_id_hex = cell.id.to_string();
 
-        // Send CellKey to each member via gift-wrap
+        // Send Sender Key to each member via gift-wrap
         let payload = serde_json::json!({
-            "key": cell.cell_key_hex,
-            "label": label,
+            "action": "sender_key",
+            "sender_pubkey": sender_pk.to_bech32()?,
+            "chain_key_hex": sender_key.chain_key_hex,
+            "msg_count": 0,
             "id": cell.id.to_string(),
+            "label": label,
         });
         let payload_str = payload.to_string();
 
@@ -69,27 +99,57 @@ impl CellTransport {
         let store = self.store.lock().await;
         let cell = store
             .find(cell_id)
-            .ok_or_else(|| format!("Cellule {} introuvable", cell_id))?;
-        let cell_sk_hex = cell.cell_key_hex.clone();
+            .ok_or_else(|| format!("Cellule {} introuvable", cell_id))?
+            .clone();
         let cell_id_hex = cell.id.to_string();
         let cell_label = cell.label.clone();
+        let existing_keys = cell.sender_keys.clone();
         drop(store);
 
+        // Generate a Sender Key for the new member
+        let new_chain_key = {
+            use rand::RngCore;
+            let mut key = [0u8; 32];
+            rand::rngs::OsRng.fill_bytes(&mut key);
+            key
+        };
+
+        let new_sender_key = SenderKey {
+            member_pubkey: *new_member_pk,
+            chain_key_hex: hex::encode(new_chain_key),
+            msg_count: 0,
+            created_at_secs: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs(),
+        };
+
+        // Send all existing sender keys + new member's key to the new member
+        let mut all_keys = existing_keys.clone();
+        all_keys.push(new_sender_key.clone());
+
         let payload = serde_json::json!({
-            "key": cell_sk_hex,
-            "label": cell_label,
+            "action": "sender_key",
+            "sender_keys": all_keys.iter().map(|sk| serde_json::json!({
+                "member_pubkey": sk.member_pubkey.to_bech32().unwrap_or_default(),
+                "chain_key_hex": &sk.chain_key_hex,
+                "msg_count": sk.msg_count,
+            })).collect::<Vec<_>>(),
             "id": cell_id_hex,
+            "label": cell_label,
         });
         let payload_str = payload.to_string();
 
         self.send_cell_key(new_member_pk, &payload_str, &cell_id_hex)
             .await?;
 
+        // Update local store
         let mut store = self.store.lock().await;
-        let mut cell = store.find(cell_id).cloned().unwrap();
-        cell.members.push(CellMember::new(*new_member_pk, None));
-        store.update_members(cell_id, cell.members.clone());
-        store.save()?;
+        if let Some(cell) = store.cells.iter_mut().find(|c| c.id == *cell_id) {
+            cell.members.push(CellMember::new(*new_member_pk, None));
+            cell.sender_keys.push(new_sender_key);
+            store.save()?;
+        }
 
         Ok(())
     }
