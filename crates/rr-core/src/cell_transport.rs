@@ -174,7 +174,7 @@ impl CellTransport {
         if let Some(sk) = cell.sender_keys.iter().find(|sk| sk.member_pubkey == my_pk) {
             let mut chain = [0u8; 32];
             hex::decode_to_slice(&sk.chain_key_hex, &mut chain)?;
-            let (msg_key, next_chain) = sender_key::ratchet_forward(&chain);
+            let (msg_key, next_chain) = sender_key::ratchet_forward(&chain, sk.msg_count);
             let cipher = sender_key::encrypt_with_message_key(&msg_key, content)?;
             let cipher_b64 = {
                 use base64::Engine as _;
@@ -482,10 +482,10 @@ impl CellTransport {
                                 .find(|sk| sk.member_pubkey == sender_pk)
                             {
                                 let mut chain = [0u8; 32];
-                                if hex::decode_to_slice(&sk.chain_key_hex, &mut chain).is_ok() {
-                                    let (msg_key, next_chain) = sender_key::ratchet_forward(&chain);
-                                    if let Ok(cipher_bytes) = {
-                                        use base64::Engine as _;
+                                    if hex::decode_to_slice(&sk.chain_key_hex, &mut chain).is_ok() {
+                                        let (msg_key, next_chain) = sender_key::ratchet_forward(&chain, sk.msg_count);
+                                        if let Ok(cipher_bytes) = {
+                                            use base64::Engine as _;
                                         let engine = base64::engine::general_purpose::STANDARD;
                                         engine.decode(&rumor.content)
                                     } {
@@ -601,7 +601,7 @@ impl CellTransport {
                                             .is_ok()
                                         {
                                             let (msg_key, next_chain) =
-                                                sender_key::ratchet_forward(&chain);
+                                                sender_key::ratchet_forward(&chain, sk.msg_count);
                                             if let Ok(cipher_bytes) = {
                                                 use base64::Engine as _;
                                                 let engine =

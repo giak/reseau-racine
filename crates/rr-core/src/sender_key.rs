@@ -5,15 +5,15 @@ use chacha20poly1305::{
 use hkdf::Hkdf;
 use sha2::Sha256;
 
-/// HKDF info string for sender key ratchet
-const SENDER_KEY_INFO: &[u8] = b"rr:group:sender_key:v1";
-
 /// Ratchet forward: chain_key_n → (message_key, chain_key_{n+1})
 /// Uses HKDF-SHA256 with salt = chain_key_n (no salt for simplicity)
-pub fn ratchet_forward(chain_key: &[u8; 32]) -> ([u8; 32], [u8; 32]) {
+/// msg_count is baked into the HKDF info string so that reusing the same
+/// chain_key (e.g. after a crash) with different msg_count yields different keys.
+pub fn ratchet_forward(chain_key: &[u8; 32], msg_count: u64) -> ([u8; 32], [u8; 32]) {
+    let info = [&b"rr:group:sender_key:v1"[..], &msg_count.to_be_bytes()].concat();
     let hk = Hkdf::<Sha256>::new(None, chain_key);
     let mut okm = [0u8; 64];
-    hk.expand(SENDER_KEY_INFO, &mut okm)
+    hk.expand(&info, &mut okm)
         .expect("HKDF expand should not fail with valid length");
     let mut message_key = [0u8; 32];
     let mut next_chain = [0u8; 32];
