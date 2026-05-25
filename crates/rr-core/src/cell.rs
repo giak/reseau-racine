@@ -67,7 +67,7 @@ impl Cell {
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct CellStore {
-    cells: Vec<Cell>,
+    pub(crate) cells: Vec<Cell>,
 }
 
 impl CellStore {

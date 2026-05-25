@@ -5,6 +5,7 @@ use tokio::sync::Mutex;
 use uuid::Uuid;
 
 use crate::cell::{Cell, CellMember, CellStore};
+use crate::sender_key;
 use crate::CryptoProvider;
 
 pub struct CellTransport {
@@ -101,26 +102,63 @@ impl CellTransport {
         let store = self.store.lock().await;
         let cell = store
             .find(cell_id)
-            .ok_or_else(|| format!("Cellule {} introuvable", cell_id))?;
-
-        let cell_sk = SecretKey::from_hex(&cell.cell_key_hex)?;
-        let cell_pk = Keys::new(cell_sk.clone()).public_key();
+            .ok_or_else(|| format!("Cellule {} introuvable", cell_id))?
+            .clone();
         let cell_id_hex = cell.id.to_string();
         let members: Vec<PublicKey> = cell.members.iter().map(|m| m.pubkey).collect();
+        let my_pk = self.keys.public_key();
         drop(store);
 
-        let encrypted = CryptoProvider::encrypt(&cell_sk, &cell_pk, content)?;
+        // Sender Key path
+        if let Some(sk) = cell.sender_keys.iter().find(|sk| sk.member_pubkey == my_pk) {
+            let mut chain = [0u8; 32];
+            hex::decode_to_slice(&sk.chain_key_hex, &mut chain)?;
+            let (msg_key, next_chain) = sender_key::ratchet_forward(&chain);
+            let cipher = sender_key::encrypt_with_message_key(&msg_key, content)?;
+            let cipher_b64 = {
+                use base64::Engine as _;
+                let engine = base64::engine::general_purpose::STANDARD;
+                engine.encode(&cipher)
+            };
 
-        let rumor = EventBuilder::new(Kind::TextNote, encrypted)
-            .tag(Tag::custom(
-                TagKind::Custom("h".to_string().into()),
-                vec![cell_id_hex],
-            ))
-            .build(self.keys.public_key());
+            let rumor = EventBuilder::new(Kind::TextNote, cipher_b64)
+                .tag(Tag::custom(
+                    TagKind::Custom("h".to_string().into()),
+                    vec![cell_id_hex],
+                ))
+                .build(self.keys.public_key());
 
-        for member_pk in &members {
-            let wrap = EventBuilder::gift_wrap(&self.keys, member_pk, rumor.clone(), []).await?;
-            self.client.send_event(&wrap).await?;
+            for member_pk in &members {
+                let wrap = EventBuilder::gift_wrap(&self.keys, member_pk, rumor.clone(), []).await?;
+                self.client.send_event(&wrap).await?;
+            }
+
+            // Update chain key in store
+            let mut store = self.store.lock().await;
+            if let Some(cell) = store.cells.iter_mut().find(|c| c.id == *cell_id) {
+                if let Some(sk) = cell.sender_keys.iter_mut().find(|sk| sk.member_pubkey == my_pk) {
+                    sk.chain_key_hex = hex::encode(next_chain);
+                    sk.msg_count += 1;
+                }
+            }
+            store.save()?;
+        } else {
+            // Legacy EPIC 2 path (NIP-44 with cell_key_hex)
+            let cell_sk = SecretKey::from_hex(&cell.cell_key_hex)?;
+            let cell_pk = Keys::new(cell_sk.clone()).public_key();
+            let encrypted = CryptoProvider::encrypt(&cell_sk, &cell_pk, content)?;
+
+            let rumor = EventBuilder::new(Kind::TextNote, encrypted)
+                .tag(Tag::custom(
+                    TagKind::Custom("h".to_string().into()),
+                    vec![cell_id_hex],
+                ))
+                .build(self.keys.public_key());
+
+            for member_pk in &members {
+                let wrap = EventBuilder::gift_wrap(&self.keys, member_pk, rumor.clone(), []).await?;
+                self.client.send_event(&wrap).await?;
+            }
         }
 
         Ok(())
