@@ -17,6 +17,7 @@
 ██████████  EPIC 9  — Simulation charge       ✅  4/4   rr-stress load testing
 ████░░░░░░  SEC-1   — Sécurité Fixes          ✅  4/4   Nonce, rotation, store atomique
 ██████████  CLEAN-1 — Code mort               ✅  4/4   CryptoProvider, MessageService, TransportProvider, legacy path
+██░░░░░░░░  CI-OPT  — CI optimisation         ✅  2/2   Path filtering, cancel-in-progress
 ```
 
 ---
@@ -430,6 +431,37 @@ Suppression de 4 artéfacts de code mort : `CryptoProvider`, `MessageService`, `
 
 **Spec :** `docs/superpowers/specs/2026-05-25-dead-code-removal.md`
 **Plan :** `docs/superpowers/plans/2026-05-25-clean-1-dead-code-removal.md`
+
+---
+
+## CI-OPT — CI Optimisation ✅ (2/2)
+
+Optimisation du CI GitHub Actions : path filtering + cancel-in-progress.
+
+| Story | Status | Détail |
+|-------|--------|--------|
+| Path filtering (`dorny/paths-filter`) | ✅ | PR docs-only : seul `Detect Changes` tourne (~30s), tous les jobs skip |
+| Cancel-in-progress | ✅ | Force-push annule le run précédent au lieu d'en accumuler |
+
+### Qualité
+
+| Métrique | Status |
+|----------|--------|
+| PR docs-only | ✅ ~30s (était 20-30 min) |
+| PR code | ✅ inchangé |
+| Force-push waste | ✅ éliminé |
+
+### Décisions architecturales
+
+| Décision | Justification |
+|----------|---------------|
+| Merge queue abandonnée | Non disponible sur repos personnel GitHub (nécessite organisation) |
+| Workflow unique | Pas besoin de 3 workflows sans merge queue. Un seul `ci.yml` avec `if` gates |
+| `sbom` dépend de `build-cli` par `needs` | Même workflow, pas de duplication de `build-cli` |
+| `if: needs.changes.outputs.rust == 'true' \|\| github.event_name == 'push'` | Sur push to main, toujours tout runner. Sur PR, seulement si code changé |
+
+**Spec :** `docs/superpowers/specs/2026-05-25-ci-optimization-merge-queue.md`
+**Plan :** `docs/superpowers/plans/2026-05-25-ci-optimization-merge-queue.md`
 
 ---
 
