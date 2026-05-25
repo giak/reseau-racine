@@ -6,7 +6,7 @@ pub mod transport;
 
 pub mod cell;
 pub mod cell_transport;
-pub use cell::{Cell, CellMember, CellStore};
+pub use cell::{Cell, CellMember, CellStore, SenderKey};
 pub use cell_transport::CellTransport;
 pub use crypto::CryptoProvider;
 pub use identity::IdentityManager;

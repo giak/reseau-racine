@@ -3,10 +3,10 @@ use nostr::nips::nip19::{FromBech32, ToBech32};
 use nostr::nips::nip59::UnwrappedGift;
 use nostr::{Kind, PublicKey};
 use nostr_sdk::{Filter, RelayPoolNotification};
+use rr_core::cell::CellStore;
 use rr_core::config::Config;
 use rr_core::identity::{Identity, IdentityManager, KeySource};
 use rr_core::message::MessageService;
-use rr_core::cell::CellStore;
 use rr_core::transport::nostr::NostrTransport;
 use rr_core::CellTransport;
 use std::io::{self, Write};
@@ -111,9 +111,7 @@ enum GroupCommands {
         message: String,
     },
     /// Écouter les messages d'une cellule (ou mode découverte sans argument)
-    Listen {
-        cell_id: Option<String>,
-    },
+    Listen { cell_id: Option<String> },
 }
 
 #[tokio::main]
@@ -129,7 +127,7 @@ async fn main() {
         Commands::Sync => cmd_sync().await,
         Commands::Export { kdbx, entry } => cmd_export(kdbx, entry).await,
         Commands::Restore { phrase } => cmd_restore(phrase).await,
-            Commands::Group(group_cmd) => match group_cmd {
+        Commands::Group(group_cmd) => match group_cmd {
             GroupCommands::Create { label, members } => cmd_group_create(label, members).await,
             GroupCommands::List => cmd_group_list().await,
             GroupCommands::Info { cell_id } => cmd_group_info(cell_id).await,

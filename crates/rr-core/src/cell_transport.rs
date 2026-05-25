@@ -37,7 +37,7 @@ impl CellTransport {
             .collect();
         members.push(CellMember::new(sender_pk, Some("me".to_string())));
 
-        let cell = Cell::new(label, cell_sk_hex, members);
+        let cell = Cell::new(label, cell_sk_hex, Vec::new(), members);
         let cell_id_hex = cell.id.to_string();
 
         // Send CellKey to each member via gift-wrap
@@ -221,6 +221,7 @@ impl CellTransport {
                                         let new_cell = Cell::new(
                                             label,
                                             key.to_string(),
+                                            Vec::new(),
                                             vec![
                                                 CellMember::new(sender_pk, None),
                                                 CellMember::new(

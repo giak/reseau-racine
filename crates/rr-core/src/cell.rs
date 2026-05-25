@@ -25,17 +25,31 @@ impl CellMember {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SenderKey {
+    pub member_pubkey: PublicKey,
+    pub chain_key_hex: String,
+    pub msg_count: u64,
+    pub created_at_secs: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Cell {
     pub id: Uuid,
     pub label: String,
     /// Hex-encoded SecretKey (cell_key_hex -> SecretKey::from_hex)
     pub cell_key_hex: String,
+    pub sender_keys: Vec<SenderKey>,
     pub members: Vec<CellMember>,
     pub created_at_secs: u64,
 }
 
 impl Cell {
-    pub fn new(label: &str, cell_key_hex: String, members: Vec<CellMember>) -> Self {
+    pub fn new(
+        label: &str,
+        cell_key_hex: String,
+        sender_keys: Vec<SenderKey>,
+        members: Vec<CellMember>,
+    ) -> Self {
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()
@@ -44,6 +58,7 @@ impl Cell {
             id: Uuid::new_v4(),
             label: label.to_string(),
             cell_key_hex,
+            sender_keys,
             members,
             created_at_secs: now,
         }

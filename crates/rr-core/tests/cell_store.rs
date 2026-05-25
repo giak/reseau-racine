@@ -12,6 +12,7 @@ fn test_cell_roundtrip() {
     let cell = Cell::new(
         "test-cell",
         "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890".to_string(),
+        Vec::new(),
         vec![CellMember::new(dummy_pk(), Some("Alice".to_string()))],
     );
     let mut store = CellStore::default();
@@ -27,6 +28,7 @@ fn test_cell_store_find() {
     let cell = Cell::new(
         "find-me",
         "deadbeef".to_string(),
+        Vec::new(),
         vec![CellMember::new(dummy_pk(), None)],
     );
     let id = cell.id;
@@ -41,6 +43,7 @@ fn test_cell_store_add_remove() {
     let cell = Cell::new(
         "tmp",
         "key".to_string(),
+        Vec::new(),
         vec![CellMember::new(dummy_pk(), None)],
     );
     let id = cell.id;
@@ -56,6 +59,7 @@ fn test_cell_store_update_members() {
     let cell = Cell::new(
         "growing",
         "key".to_string(),
+        Vec::new(),
         vec![CellMember::new(dummy_pk(), None)],
     );
     let id = cell.id;
