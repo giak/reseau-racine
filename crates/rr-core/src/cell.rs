@@ -81,20 +81,41 @@ impl CellStore {
 
     pub fn load() -> Self {
         let path = Self::path();
+
+        // Clean up stale .tmp files from previous crashes
+        let tmp_path = path.with_extension("tmp");
+        if tmp_path.exists() {
+            if let Err(e) = std::fs::remove_file(&tmp_path) {
+                eprintln!("⚠️ Failed to remove stale .tmp file: {}", e);
+            }
+        }
+
         if !path.exists() {
             return Self::default();
         }
-        std::fs::read_to_string(&path)
-            .ok()
-            .and_then(|c| serde_json::from_str(&c).ok())
-            .unwrap_or_default()
+
+        match std::fs::read_to_string(&path) {
+            Ok(content) => match serde_json::from_str(&content) {
+                Ok(store) => store,
+                Err(e) => {
+                    eprintln!("⚠️ Failed to parse cells.json: {}. Using empty store.", e);
+                    Self::default()
+                }
+            },
+            Err(e) => {
+                eprintln!("⚠️ Failed to read cells.json: {}", e);
+                Self::default()
+            }
+        }
     }
 
     pub fn save(&self) -> Result<(), Box<dyn std::error::Error>> {
         let path = Self::path();
         let dir = path.parent().unwrap();
         std::fs::create_dir_all(dir)?;
-        std::fs::write(path, serde_json::to_string_pretty(self)?)?;
+        let tmp_path = path.with_extension("tmp");
+        std::fs::write(&tmp_path, serde_json::to_string_pretty(self)?)?;
+        std::fs::rename(&tmp_path, &path)?;
         Ok(())
     }
 
