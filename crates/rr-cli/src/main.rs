@@ -6,7 +6,7 @@ use nostr_sdk::{Filter, RelayPoolNotification};
 use rr_core::cell::CellStore;
 use rr_core::config::Config;
 use rr_core::identity::{Identity, IdentityManager, KeySource};
-use rr_core::message::{send_message, receive_message};
+use rr_core::message::{receive_message, send_message};
 use rr_core::transport::nostr::NostrTransport;
 use rr_core::CellTransport;
 use std::io::{self, Write};
@@ -445,8 +445,7 @@ async fn cmd_send(contact: &str, message: &str) {
     };
 
     // Envoyer
-    match send_message(transport.client(), receiver_pubkey, message).await
-    {
+    match send_message(transport.client(), receiver_pubkey, message).await {
         Ok(event_id) => {
             println!("✅ Message envoyé à {} sur {}", contact, relay);
             println!("   Event ID: {}", event_id.to_hex());

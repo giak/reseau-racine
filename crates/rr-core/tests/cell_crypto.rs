@@ -1,5 +1,5 @@
-use nostr::Keys;
 use nostr::nips::nip44;
+use nostr::Keys;
 
 fn encrypt(cell_sk: &nostr::SecretKey, cell_pk: &nostr::PublicKey, msg: &str) -> String {
     nip44::encrypt(cell_sk, cell_pk, msg, nip44::Version::V2).unwrap()

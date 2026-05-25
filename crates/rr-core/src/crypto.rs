@@ -1,14 +1,20 @@
 #[cfg(test)]
 mod tests {
-    use nostr::Keys;
     use nostr::nips::nip44;
+    use nostr::Keys;
 
     fn alice_bob() -> (Keys, Keys) {
         (Keys::generate(), Keys::generate())
     }
 
     fn encrypt(msg: &str, alice: &Keys, bob: &Keys) -> String {
-        nip44::encrypt(alice.secret_key(), &bob.public_key(), msg, nip44::Version::V2).unwrap()
+        nip44::encrypt(
+            alice.secret_key(),
+            &bob.public_key(),
+            msg,
+            nip44::Version::V2,
+        )
+        .unwrap()
     }
 
     #[test]
@@ -32,7 +38,12 @@ mod tests {
     #[test]
     fn test_empty_message_rejected() {
         let (alice, bob) = alice_bob();
-        let result = nip44::encrypt(alice.secret_key(), &bob.public_key(), "", nip44::Version::V2);
+        let result = nip44::encrypt(
+            alice.secret_key(),
+            &bob.public_key(),
+            "",
+            nip44::Version::V2,
+        );
         assert!(result.is_err(), "NIP-44 V2 rejects empty messages");
     }
 
@@ -49,7 +60,12 @@ mod tests {
     fn test_oversized_message_rejected() {
         let (alice, bob) = alice_bob();
         let msg = "A".repeat(65536);
-        let result = nip44::encrypt(alice.secret_key(), &bob.public_key(), &msg, nip44::Version::V2);
+        let result = nip44::encrypt(
+            alice.secret_key(),
+            &bob.public_key(),
+            &msg,
+            nip44::Version::V2,
+        );
         assert!(result.is_err(), "NIP-44 V2 rejects messages > 65535 bytes");
     }
 

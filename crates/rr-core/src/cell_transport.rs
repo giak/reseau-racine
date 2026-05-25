@@ -8,7 +8,6 @@ use uuid::Uuid;
 use crate::cell::{Cell, CellMember, CellStore, SenderKey};
 use crate::sender_key;
 
-
 pub struct CellTransport {
     client: Client,
     keys: Keys,
@@ -437,7 +436,6 @@ impl CellTransport {
 
         client
             .handle_notifications(|notification| {
-
                 let target_cell_id = target_cell_id.clone();
                 let client = client.clone();
                 let keys = self.keys.clone();
@@ -573,9 +571,7 @@ impl CellTransport {
                                 }
                             } else {
                                 // Known cell — decrypt and display
-                                let cell_label = store
-                                    .find(&cid)
-                                    .map(|c| c.label.clone());
+                                let cell_label = store.find(&cid).map(|c| c.label.clone());
 
                                 // Read and update atomically inside store lock
                                 let state =
@@ -624,9 +620,7 @@ impl CellTransport {
                                                     let snpub = sender_pk
                                                         .to_bech32()
                                                         .unwrap_or_else(|_| sender_pk.to_string());
-                                                    let label = cell_label
-                                                        .as_deref()
-                                                        .unwrap_or("");
+                                                    let label = cell_label.as_deref().unwrap_or("");
                                                     println!(
                                                         "[{}] {}: {}",
                                                         label, snpub, plaintext

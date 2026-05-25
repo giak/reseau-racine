@@ -10,5 +10,5 @@ pub mod sender_key;
 pub use cell::{Cell, CellMember, CellStore, SenderKey};
 pub use cell_transport::CellTransport;
 pub use identity::IdentityManager;
-pub use message::{send_message, receive_message};
+pub use message::{receive_message, send_message};
 pub use transport::nostr::NostrTransport;

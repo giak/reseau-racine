@@ -1,4 +1,4 @@
-use nostr::{Keys, nips::nip44};
+use nostr::{nips::nip44, Keys};
 use proptest::prelude::*;
 
 proptest! {
