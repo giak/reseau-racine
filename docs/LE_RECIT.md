@@ -212,6 +212,33 @@ Métaphore : avant de remplacer ton carnet d'adresses, tu écris d'abord les nou
 
 ---
 
+## Interlude — Le Grand Ménage (CLEAN-1)
+
+> **Parfois, faire le ménage est plus important que d'ajouter des fonctionnalités.**
+
+En construisant les 7 couches de l'oignon, on a accumulé du code mort — des outils qu'on n'utilise plus, des raccourcis qui traînent. Rien de cassé, mais ça rend la cuisine moins propre.
+
+### Ce qu'on a enlevé
+
+**Le manche sans couteau (`CryptoProvider`)** : un emballage vide autour des fonctions de chiffrement. Il ajoutait une couche d'indirection sans rien apporter. On l'a supprimé et les appels vont maintenant directement aux fonctions de chiffrement.
+
+**La boîte aux lettres fantôme (`MessageService`)** : une structure sans état qui servait juste à organiser deux fonctions. On l'a remplacée par des fonctions toutes simples — comme ranger des papiers dans des classeurs au lieu de les empiler dans une boîte décorative.
+
+**La promesse non tenue (`TransportProvider`)** : un plan pour pouvoir changer de réseau de transport facilement. Mais dans la pratique, on utilise Nostr et rien d'autre. Le plan était écrit mais jamais suivi. On l'a rangé.
+
+**Le chemin oublié (legacy NIP-44)** : un vieux chemin de déchiffrement qui ne pouvait plus être emprunté (la clé nécessaire était toujours vide). Comme une porte condamnée qui n'ouvrait plus sur rien. On l'a murée.
+
+### Pourquoi c'est important
+
+Le code mort n'est pas inoffensif :
+- **Il trompe** : quelqu'un qui lit le code peut croire que ces chemins sont utilisés.
+- **Il alourdit** : plus de code à maintenir, à mettre à jour, à porter.
+- **Il crée du doute** : "est-ce que ce code sert encore ?" est une question qui ralentit tout le monde.
+
+Métaphore : une cuisine où les placards sont pleins d'ustensiles cassés. Ranger, ce n'est pas cuisiner — mais ça rend la cuisine possible.
+
+---
+
 ## La Suite — Les Prochaines Couches
 
 > **Un oignon n'a jamais fini de pousser.**
@@ -226,9 +253,6 @@ Aujourd'hui, tout se fait en ligne de commande. Demain, une vraie application de
 
 ### Nœud relais (EPIC 6) — Le serveur personnel
 Un petit boîtier (Raspberry Pi) qui fait office de relais Nostr personnel. Tu contrôles ton propre serveur de messages, hébergé chez toi.
-
-### Nettoyage (CLEAN-1) — Faire le ménage
-Du code mort, des fonctions inutilisées, des chemins de code obsolètes qui traînent. Rien de cassé, mais c'est plus propre sans.
 
 ### Erreurs élégantes (ERR-1) — Des messages d'erreur qui veulent dire quelque chose
 Quand quelque chose plante, le logiciel affiche parfois des messages obscurs. On les remplace par des messages clairs et utiles.

@@ -325,6 +325,7 @@ docker compose -f .devcontainer/compose.yaml logs -f nostr-relay
 | 4 | ⬜ | Interface graphique (Tauri) |
 | 6 | ⬜ | Nœud relais embarqué |
 | SEC-1 | ✅ | Sécurité Fixes : nonce ChaCha20, auth rotation, store atomique |
+| CLEAN-1 | ✅ | Code mort : CryptoProvider, MessageService, TransportProvider, legacy path |
 
 ---
 
