@@ -379,23 +379,19 @@ impl CellTransport {
             return;
         }
 
-        // Verify sender is a member of the cell
-        {
-            let store_lock = store.lock().await;
-            let is_member = store_lock
-                .find(cid)
-                .map(|cell| cell.members.iter().any(|m| m.pubkey == *sender_pk))
-                .unwrap_or(false);
-            if !is_member {
-                eprintln!(
-                    "⚠️ Key rotation rejected: sender {} is not a member of cell {}",
-                    sender_pk, cid
-                );
-                return;
-            }
+        let mut store = store.lock().await;
+        let is_member = store
+            .find(cid)
+            .map(|cell| cell.members.iter().any(|m| m.pubkey == *sender_pk))
+            .unwrap_or(false);
+        if !is_member {
+            eprintln!(
+                "⚠️ Key rotation rejected: sender {} is not a member of cell {}",
+                sender_pk, cid
+            );
+            return;
         }
 
-        let mut store = store.lock().await;
         if let Some(cell) = store.cells.iter_mut().find(|c| c.id == *cid) {
             for nk in new_keys {
                 if let Some(existing) = cell
@@ -419,16 +415,16 @@ impl CellTransport {
         let my_pk = self.keys.public_key();
         let client = self.client.clone();
 
-        let (target_cell_id, cell_sk, cell_pk, cell_sender_keys) = if let Some(cid) = cell_id {
+        let (target_cell_id, cell_sk, cell_pk) = if let Some(cid) = cell_id {
             let store = self.store.lock().await;
             let cell = store
                 .find(cid)
                 .ok_or_else(|| format!("Cellule {} introuvable", cid))?;
             let sk = SecretKey::from_hex(&cell.cell_key_hex).ok();
             let pk = sk.as_ref().map(|s| Keys::new(s.clone()).public_key());
-            (Some(cell.id.to_string()), sk, pk, cell.sender_keys.clone())
+            (Some(cell.id.to_string()), sk, pk)
         } else {
-            (None, None, None, vec![])
+            (None, None, None)
         };
 
         let filter = Filter::new().kind(Kind::GiftWrap).pubkey(my_pk);
@@ -444,7 +440,6 @@ impl CellTransport {
         client
             .handle_notifications(|notification| {
                 let cell_sk = cell_sk.clone();
-                let _cell_sender_keys = cell_sender_keys.clone();
                 let target_cell_id = target_cell_id.clone();
                 let client = client.clone();
                 let keys = self.keys.clone();
