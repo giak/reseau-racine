@@ -20,6 +20,6 @@ bip39 = { version = "2", features = ["rand"] }
 keepass = "0.12"
 rpassword = "7"
 shellexpand = "3"
-toml = "0.8"
+toml = "1.1"
 dirs = "6"
 serial_test = "3"
