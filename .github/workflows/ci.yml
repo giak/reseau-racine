@@ -138,7 +138,7 @@ jobs:
       - uses: mozilla-actions/sccache-action@v0.0.10
       - uses: Swatinem/rust-cache@v2
       - name: Restore baseline cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: target/criterion
           key: bench-crypto-${{ github.ref_name }}
@@ -206,7 +206,7 @@ jobs:
         with:
           tool: cargo-fuzz
       - name: Restore corpus cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: crates/rr-core/fuzz/corpus/${{ matrix.target }}
           key: fuzz-corpus-${{ matrix.target }}-${{ github.sha }}
